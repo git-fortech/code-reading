@@ -12,6 +12,8 @@
 #include "lj_str.h"
 #include "lj_char.h"
 
+#include "yuanguodebug.h"
+
 /* -- String helpers ------------------------------------------------------ */
 
 /* Ordered compare of strings. Assumes string data is 4-byte aligned. */
@@ -105,11 +107,32 @@ int lj_str_haspattern(GCstr *s)
 /* Resize the string hash table (grow and shrink). */
 void lj_str_resize(lua_State *L, MSize newmask)
 {
+  //Yuanguo:
+  //  high +-------------+ newmask+1
+  //       |   GCRef     |
+  //       +-------------+ newmask         = g->newmask
+  //       |   GCRef     |
+  //       +-------------+
+  //       ......          
+  //       +-------------+ 4     hash=3   GCobj(actually GCstr)
+  //       |   GCRef     |     ------------>   +---------+   
+  //       +-------------+ 3                   | nextgc  | ------->  +---------+
+  //       |   GCRef     |                     |         |           | nextgc  | ------> ...
+  //       +-------------+ 2                                         |         |
+  //       |   GCRef     |
+  //       +-------------+ 1
+  //       |   GCRef     |
+  //   low +-------------+ 0   <------------ g->strhash
+
+  dd("Enter, newmask=%u", newmask);
   global_State *g = G(L);
   GCRef *newhash;
   MSize i;
   if (g->gc.state == GCSsweepstring || newmask >= LJ_MAX_STRTAB-1)
+  {
+    dd("Exit 1");
     return;  /* No resizing during GC traversal or if already too big. */
+  }
   newhash = lj_mem_newvec(L, newmask+1, GCRef);
   memset(newhash, 0, (newmask+1)*sizeof(GCRef));
   for (i = g->strmask; i != ~(MSize)0; i--) {  /* Rehash old table. */
@@ -118,14 +141,16 @@ void lj_str_resize(lua_State *L, MSize newmask)
       MSize h = gco2str(p)->hash & newmask;
       GCobj *next = gcnext(p);
       /* NOBARRIER: The string table is a GC root. */
-      setgcrefr(p->gch.nextgc, newhash[h]);
-      setgcref(newhash[h], p);
+      //Yuanguo: link p to the head of newhash[h];
+      setgcrefr(p->gch.nextgc, newhash[h]);   //Yuanguo: p->nextgc points to the original list; 
+      setgcref(newhash[h], p);                //Yuanguo: newhash[h] points to p;
       p = next;
     }
   }
   lj_mem_freevec(g, g->strhash, g->strmask+1, GCRef);
   g->strmask = newmask;
   g->strhash = newhash;
+  dd("Exit 2, g->strmask=%u", g->strmask);
 }
 
 /* Intern a string and return string object. */

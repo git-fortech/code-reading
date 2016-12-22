@@ -23,14 +23,38 @@
 #include "lj_strfmt.h"
 #include "lj_lib.h"
 
+#include "yuanguodebug.h"
+
 /* -- Metamethod handling ------------------------------------------------- */
 
 /* String interning of metamethod names for fast indexing. */
 void lj_meta_init(lua_State *L)
 {
+  //Yuanguo:
+  // metanames is sth like: 
+  //   __index__newindex__gc__mode__eq__len__lt__le__concat__call__add__sub__mul__div__mod__pow__unm__metatable__tostring__new__pairs__ipairs 
+  //
+  //   high  +-----------+
+  //         |   GCRef   |
+  //         +-----------+
+  //         |   GCRef   |
+  //         +-----------+
+  //         ......       
+  //         +-----------+ 
+  //         |   GCRef   |
+  //         +-----------+ GCROOT_MMNAME+3 
+  //         |   GCRef   |                  ---->  ...
+  //         +-----------+ GCROOT_MMNAME+2
+  //         |   GCRef   |                  ---->  GCstr ("__newindex")
+  //         +-----------+ GCROOT_MMNAME+1        
+  //         |   GCRef   |                  ---->  GCstr ("__index")
+  //    low  +-----------+ GCROOT_MMNAME+0 <------------------------------- g->gcroot 
+
+  dd("Enter");
 #define MMNAME(name)	"__" #name
   const char *metanames = MMDEF(MMNAME);
 #undef MMNAME
+  dd("metanames=%s", metanames);
   global_State *g = G(L);
   const char *p, *q;
   uint32_t mm;
@@ -38,9 +62,11 @@ void lj_meta_init(lua_State *L)
     GCstr *s;
     for (q = p+2; *q && *q != '_'; q++) ;
     s = lj_str_new(L, p, (size_t)(q-p));
+    dd_GCstr(*s);
     /* NOBARRIER: g->gcroot[] is a GC root. */
     setgcref(g->gcroot[GCROOT_MMNAME+mm], obj2gco(s));
   }
+  dd("Exit");
 }
 
 /* Negative caching of a few fast metamethods. See the lj_meta_fast() macro. */

@@ -126,6 +126,34 @@ void LJ_FASTCALL lj_state_growstack1(lua_State *L)
 /* Allocate basic stack for new state. */
 static void stack_init(lua_State *L1, lua_State *L)
 {
+  //Yuanguo:
+  // high +-------------+ LJ_STACK_START+LJ_STACK_EXTRA  =  L1->stacksize 
+  //      |   TValue    |                |
+  //      +-------------+                |
+  //      |   TValue    |                |
+  //      +-------------+          LJ_STACK_EXTRA
+  //      |   TValue    |                |
+  //      +-------------+                |
+  //      ......                         |
+  //      +-------------+ LJ_STACK_START--------------- 
+  //      |   TValue    |    nil
+  //      +-------------+  <--------------------------------- L1->maxstack
+  //      |   TValue    |    nil
+  //      +-------------+
+  //      |   TValue    |    nil
+  //      +-------------+
+  //      ......           
+  //      +-------------+ 4
+  //      |   TValue    |    nil
+  //      +-------------+ 3
+  //      |   TValue    |    nil(empty pointer)
+  //      +-------------+ 2 <-------------------------------- L1->base, L1->top
+  //      |   TValue    |    points to nil  if LJ_FR2
+  //      +-------------+ 1
+  //      |   TValue    |    ponits to L1 (current thread)
+  //  low +-------------+ 0 <--------------------------------  L1->stack
+
+  dd("Enter");
   TValue *stend, *st = lj_mem_newvec(L, LJ_STACK_START+LJ_STACK_EXTRA, TValue);
   setmref(L1->stack, st);
   L1->stacksize = LJ_STACK_START + LJ_STACK_EXTRA;
@@ -136,6 +164,7 @@ static void stack_init(lua_State *L1, lua_State *L)
   L1->base = L1->top = st;
   while (st < stend)  /* Clear new slots. */
     setnilV(st++);
+  dd("Exit");
 }
 
 /* -- State handling ------------------------------------------------------ */
@@ -143,19 +172,21 @@ static void stack_init(lua_State *L1, lua_State *L)
 /* Open parts that may cause memory-allocation errors. */
 static TValue *cpluaopen(lua_State *L, lua_CFunction dummy, void *ud)
 {
+  dd("Enter");
   global_State *g = G(L);
   UNUSED(dummy);
   UNUSED(ud);
   stack_init(L, L);
   /* NOBARRIER: State initialization, all objects are white. */
   setgcref(L->env, obj2gco(lj_tab_new(L, 0, LJ_MIN_GLOBAL)));
-  settabV(L, registry(L), lj_tab_new(L, 0, LJ_MIN_REGISTRY));
-  lj_str_resize(L, LJ_MIN_STRTAB-1);
-  lj_meta_init(L);
-  lj_lex_init(L);
+  settabV(L, registry(L), lj_tab_new(L, 0, LJ_MIN_REGISTRY)); //Yuanguo: registry is global to all routines, functions ... (kept in global_State);
+  lj_str_resize(L, LJ_MIN_STRTAB-1);                          //Yuanguo: init the string hash table (strhash and strmask) in global_State;
+  lj_meta_init(L);    //Yuanguo: create strings of metamethod name (such as "__index", "__newindex", "__gc", ...) and put them in g->gcroot[];
+  lj_lex_init(L);     //Yuanguo: create key word strings (such as "if", "then", "or", ...), make them fixed and reserve them (for faster lexer lookup);
   fixstring(lj_err_str(L, LJ_ERR_ERRMEM));  /* Preallocate memory error msg. */
   g->gc.threshold = 4*g->gc.total;
   lj_trace_initstate(g);
+  dd("Exit");
   return NULL;
 }
 
@@ -209,7 +240,7 @@ LUA_API lua_State *lua_newstate(lua_Alloc f, void *ud)
   g->strempty.gct = ~LJ_TSTR;
   g->allocf = f;
   g->allocd = ud;
-  setgcref(g->mainthref, obj2gco(L));
+  setgcref(g->mainthref, obj2gco(L));//Yuanguo: this call path (luaL_newstate->lj_state_newstate) is for main thread; for coroutine, see coroutine_create, lib_base.c;
   setgcref(g->uvhead.prev, obj2gco(&g->uvhead));
   setgcref(g->uvhead.next, obj2gco(&g->uvhead));
   g->strmask = ~(MSize)0;
@@ -221,9 +252,9 @@ LUA_API lua_State *lua_newstate(lua_Alloc f, void *ud)
 #endif
   lj_buf_init(NULL, &g->tmpbuf);
   g->gc.state = GCSpause;
-  setgcref(g->gc.root, obj2gco(L));
+  setgcref(g->gc.root, obj2gco(L));  //Yuanguo: gc.root points to the lua_State of the main thread;
   setmref(g->gc.sweep, &g->gc.root);
-  g->gc.total = sizeof(GG_State);
+  g->gc.total = sizeof(GG_State);    //Yuanguo: no extra mem is allocated except GG_State, that is the gc.total;
   g->gc.pause = LUAI_GCPAUSE;
   g->gc.stepmul = LUAI_GCMUL;
   lj_dispatch_init((GG_State *)L);

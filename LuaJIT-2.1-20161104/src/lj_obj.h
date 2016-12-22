@@ -705,17 +705,25 @@ LJ_STATIC_ASSERT(offsetof(GChead, gclist) == offsetof(GCproto, gclist));
 LJ_STATIC_ASSERT(offsetof(GChead, gclist) == offsetof(GCfuncL, gclist));
 LJ_STATIC_ASSERT(offsetof(GChead, gclist) == offsetof(GCtab, gclist));
 
-typedef union GCobj {
-  GChead gch;
-  GCstr str;
-  GCupval uv;
-  lua_State th;
-  GCproto pt;
-  GCfunc fn;
-  GCcdata cd;
-  GCtab tab;
-  GCudata ud;
-} GCobj;
+//Yuanguo:
+                      //    GChead         |      GCstr         |     lua_State         |    GCtab
+typedef union GCobj { //-------------------+--------------------+-----------------------+----------
+  GChead gch;         // GCRef   nextgc;   |  GCRef   nextgc;   |  GCRef   nextgc;      |  GCRef    nextgc;
+  GCstr str;          // uint8_t marked;   |  uint8_t marked;   |  uint8_t marked;      |  uint8_t  marked;
+  GCupval uv;         // uint8_t gct;      |  uint8_t gct;      |  uint8_t gct;         |  uint8_t  gct;
+  lua_State th;       // uint8_t unused1;  |  uint8_t reserved; |  uint8_t dummy_ffid;  |  uint8_t  nomm;
+  GCproto pt;         // uint8_t unused2;  |  uint8_t unused;   |  uint8_t status;      |  int8_t   colo
+  GCfunc fn;          // GCRef   env;      |  MSize   hash;     |  MRef    glref;       |  MRef     array;
+  GCcdata cd;         // GCRef   gclist;   |  MSize   len;      |  GCRef   gclist;      |  GCRef    gclist;
+  GCtab tab;          // GCRef   metatable;|  "the string ..."  |  TValue  *base;       |  GCRef    metatable;
+  GCudata ud;         //                   |                    |  TValue  *top;        |  MRef     node;
+} GCobj;              //                   |                    |  MRef    maxstack;    |  uint32_t asize;
+                      //                   |                    |  MRef    stack;       |  uint32_t hmask;
+                      //                   |                    |  GCRef   openupval;   |  MRef     freetop; #if LJ_GC64
+                      //                   |                    |  GCRef   env;         |
+                      //                   |                    |  void    *cframe;     |
+                      //                   |                    |  MSize   stacksize;   |
+
 
 /* Macros to convert a GCobj pointer into a specific value. */
 #define gco2str(o)	check_exp((o)->gch.gct == ~LJ_TSTR, &(o)->str)

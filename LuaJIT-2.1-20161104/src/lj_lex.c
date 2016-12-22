@@ -27,6 +27,8 @@
 #include "lj_strscan.h"
 #include "lj_strfmt.h"
 
+#include "yuanguodebug.h"
+
 /* Lua lexer token names. */
 static const char *const tokennames[] = {
 #define TKSTR1(name)		#name,
@@ -499,11 +501,14 @@ void lj_lex_error(LexState *ls, LexToken tok, ErrMsg em, ...)
 /* Initialize strings for reserved words. */
 void lj_lex_init(lua_State *L)
 {
+  dd("Enter");
   uint32_t i;
   for (i = 0; i < TK_RESERVED; i++) {
     GCstr *s = lj_str_newz(L, tokennames[i]);
+    dd_GCstr(*s);
     fixstring(s);  /* Reserved words are never collected. */
     s->reserved = (uint8_t)(i+1);
   }
+  dd("Exit");
 }
 

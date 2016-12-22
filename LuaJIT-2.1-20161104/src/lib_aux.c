@@ -308,6 +308,7 @@ static int panic(lua_State *L)
 #error "Must use builtin allocator for 64 bit target"
 #endif
 
+#error "Yuanguo, not here"
 static void *mem_alloc(void *ud, void *ptr, size_t osize, size_t nsize)
 {
   (void)ud;
@@ -320,6 +321,7 @@ static void *mem_alloc(void *ud, void *ptr, size_t osize, size_t nsize)
   }
 }
 
+#error "Yuanguo, not here"
 LUALIB_API lua_State *luaL_newstate(void)
 {
   lua_State *L = lua_newstate(mem_alloc, NULL);
