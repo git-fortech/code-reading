@@ -15,6 +15,8 @@
 #include "lj_char.h"
 #include "lj_strfmt.h"
 
+#include "yuanguodebug.h"
+
 /* -- Format parser ------------------------------------------------------- */
 
 static const uint8_t strfmt_map[('x'-'A')+1] = {
@@ -415,6 +417,7 @@ GCstr * LJ_FASTCALL lj_strfmt_obj(lua_State *L, cTValue *o)
 /* Push formatted message as a string object to Lua stack. va_list variant. */
 const char *lj_strfmt_pushvf(lua_State *L, const char *fmt, va_list argp)
 {
+  dd("Enter");
   SBuf *sb = lj_buf_tmp_(L);
   FormatState fs;
   SFormat sf;
@@ -454,8 +457,11 @@ const char *lj_strfmt_pushvf(lua_State *L, const char *fmt, va_list argp)
     }
   }
   str = lj_buf_str(L, sb);
-  setstrV(L, L->top, str);
-  incr_top(L);
+  dd_GCstr(*str);
+  //Yuanguo: push str on stack;
+  setstrV(L, L->top, str);  //Yuanguo: let L->top point to str;
+  incr_top(L);              //Yuanguo: move L->top to next slot, and increase stack capacity if full;
+  dd("Exit");
   return strdata(str);
 }
 

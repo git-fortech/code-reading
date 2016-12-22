@@ -90,10 +90,11 @@ typedef struct GG_State {
   lua_State L;				/* Main thread. */
   global_State g;			/* Global state. */
 #if LJ_TARGET_MIPS
+#error "Yuanguo, not here"
   ASMFunction got[LJ_GOT__MAX];		/* Global offset table. */
 #endif
 #if LJ_HASJIT
-  jit_State J;				/* JIT state. */
+  jit_State J;				/* JIT state. */   //Yuanguo: we have this! LJ_HASJIT is defined;
   HotCount hotcount[HOTCOUNT_SIZE];	/* Hot counters. */
 #endif
   ASMFunction dispatch[GG_LEN_DISP];	/* Instruction dispatch tables. */

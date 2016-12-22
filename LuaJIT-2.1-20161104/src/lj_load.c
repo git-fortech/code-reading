@@ -29,6 +29,7 @@
 
 static TValue *cpparser(lua_State *L, lua_CFunction dummy, void *ud)
 {
+  dd("Enter");
   LexState *ls = (LexState *)ud;
   GCproto *pt;
   GCfunc *fn;
@@ -36,6 +37,7 @@ static TValue *cpparser(lua_State *L, lua_CFunction dummy, void *ud)
   UNUSED(dummy);
   cframe_errfunc(L->cframe) = -1;  /* Inherit error function. */
   bc = lj_lex_setup(L, ls);
+  dd("bc=%d", bc);
   if (ls->mode && !strchr(ls->mode, bc ? 'b' : 't')) {
     setstrV(L, L->top++, lj_err_str(L, LJ_ERR_XMODE));
     lj_err_throw(L, LUA_ERRSYNTAX);
@@ -44,12 +46,15 @@ static TValue *cpparser(lua_State *L, lua_CFunction dummy, void *ud)
   fn = lj_func_newL_empty(L, pt, tabref(L->env));
   /* Don't combine above/below into one statement. */
   setfuncV(L, L->top++, fn);
+
+  dd("Exit");
   return NULL;
 }
 
 LUA_API int lua_loadx(lua_State *L, lua_Reader reader, void *data,
 		      const char *chunkname, const char *mode)
 {
+  dd("Enter");
   LexState ls;
   int status;
   ls.rfunc = reader;
@@ -60,6 +65,8 @@ LUA_API int lua_loadx(lua_State *L, lua_Reader reader, void *data,
   status = lj_vm_cpcall(L, NULL, &ls, cpparser);
   lj_lex_cleanup(L, &ls);
   lj_gc_check(L);
+
+  dd("Exit status=%d", status);
   return status;
 }
 

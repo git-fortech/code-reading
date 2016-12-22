@@ -28,6 +28,8 @@
 #include "lj_vm.h"
 #include "lj_vmevent.h"
 
+#include "yuanguodebug.h"
+
 /* -- Parser structures and definitions ----------------------------------- */
 
 /* Expression kinds. */
@@ -1547,6 +1549,7 @@ static void fs_fixup_ret(FuncState *fs)
 /* Finish a FuncState and return the new prototype. */
 static GCproto *fs_finish(LexState *ls, BCLine line)
 {
+  dd("Enter");
   lua_State *L = ls->L;
   FuncState *fs = ls->fs;
   BCLine numline = line - fs->linedefined;
@@ -1590,6 +1593,8 @@ static GCproto *fs_finish(LexState *ls, BCLine line)
   ls->vtop = fs->vbase;  /* Reset variable stack. */
   ls->fs = fs->prev;
   lua_assert(ls->fs != NULL || ls->tok == TK_eof);
+
+  dd("Exit");
   return pt;
 }
 
@@ -2691,6 +2696,8 @@ static void parse_chunk(LexState *ls)
 /* Entry point of bytecode parser. */
 GCproto *lj_parse(LexState *ls)
 {
+  dd("Enter");
+
   FuncState fs;
   FuncScope bl;
   GCproto *pt;
@@ -2720,6 +2727,8 @@ GCproto *lj_parse(LexState *ls)
   lua_assert(fs.prev == NULL);
   lua_assert(ls->fs == NULL);
   lua_assert(pt->sizeuv == 0);
+
+  dd("Exit");
   return pt;
 }
 

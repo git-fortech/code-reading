@@ -353,6 +353,8 @@ typedef struct GCcdataVar {
 #define SCALE_NUM_GCO	((int32_t)sizeof(lua_Number)/sizeof(GCRef))
 #define round_nkgc(n)	(((n) + SCALE_NUM_GCO-1) & ~(SCALE_NUM_GCO-1))
 
+//Yuanguo: 
+//    for Lua functions,  what's following the GCproto object is bytecode instructions;
 typedef struct GCproto {
   GCHeader;
   uint8_t numparams;	/* Number of parameters. */
@@ -449,6 +451,20 @@ typedef struct GCfuncL {
   GCfuncHeader;
   GCRef uvptr[1];	/* Array of _pointers_ to upvalue objects (GCupval). */
 } GCfuncL;
+//Yuanguo:
+//    GCRef nextgc; 
+//    uint8_t marked; 
+//    uint8_t gct                  =  ~LJ_TFUNC
+//    uint8_t ffid;                =  FF_LUA
+//    uint8_t nupvalues;
+//    GCRef env; 
+//    GCRef gclist; 
+//    MRef pc;                     -> byte code instruction;
+//    GCRef upvalue[0];
+//    GCRef upvalue[1];
+//    GCRef upvalue[2];
+//    ....
+//    GCRef upvalue[nupvalues-1];
 
 typedef union GCfunc {
   GCfuncC c;

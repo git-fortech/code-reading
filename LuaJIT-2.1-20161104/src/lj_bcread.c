@@ -23,6 +23,8 @@
 #include "lj_state.h"
 #include "lj_strfmt.h"
 
+#include "yuanguodebug.h"
+
 /* Reuse some lexer fields for our own purposes. */
 #define bcread_flags(ls)	ls->level
 #define bcread_swap(ls) \
@@ -420,6 +422,7 @@ static int bcread_header(LexState *ls)
 /* Read a bytecode dump. */
 GCproto *lj_bcread(LexState *ls)
 {
+  dd("Enter");
   lua_State *L = ls->L;
   lua_assert(ls->c == BCDUMP_HEAD1);
   bcread_savetop(L, ls, L->top);
@@ -452,6 +455,8 @@ GCproto *lj_bcread(LexState *ls)
     bcread_error(ls, LJ_ERR_BCBAD);
   /* Pop off last prototype. */
   L->top--;
+
+  dd("Exit");
   return protoV(L->top);
 }
 

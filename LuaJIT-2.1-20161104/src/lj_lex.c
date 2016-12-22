@@ -395,6 +395,7 @@ static LexToken lex_scan(LexState *ls, TValue *tv)
 /* Setup lexer state. */
 int lj_lex_setup(lua_State *L, LexState *ls)
 {
+  dd("Enter");
   int header = 0;
   ls->L = L;
   ls->fs = NULL;
@@ -418,7 +419,11 @@ int lj_lex_setup(lua_State *L, LexState *ls)
   if (ls->c == '#') {  /* Skip POSIX #! header line. */
     do {
       lex_next(ls);
-      if (ls->c == LEX_EOF) return 0;
+      if (ls->c == LEX_EOF) 
+      {
+        dd("Exit");
+        return 0;
+      }
     } while (!lex_iseol(ls));
     lex_newline(ls);
     header = 1;
@@ -434,8 +439,10 @@ int lj_lex_setup(lua_State *L, LexState *ls)
       setstrV(L, L->top++, lj_err_str(L, LJ_ERR_BCBAD));
       lj_err_throw(L, LUA_ERRSYNTAX);
     }
+    dd("Exit");
     return 1;
   }
+  dd("Exit");
   return 0;
 }
 
