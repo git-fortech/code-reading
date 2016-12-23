@@ -1377,7 +1377,7 @@ static void fs_fixup_k(FuncState *fs, GCproto *pt, void *kptr)
 	}
       } else {
 	GCobj *o = gcV(&n->key);
-	setgcref(((GCRef *)kptr)[~kidx], o);
+	setgcref(((GCRef *)kptr)[~kidx], o);  //Yuanguo: ~2 = -3, ~3 = -4, ...
 	lj_gc_objbarrier(fs->L, pt, o);
 	if (tvisproto(&n->key))
 	  fs_fixup_uv2(fs, gco2pt(o));
@@ -1559,11 +1559,66 @@ static GCproto *fs_finish(LexState *ls, BCLine line)
   /* Apply final fixups. */
   fs_fixup_ret(fs);
 
+
+  //Yuanguo:
+  //   high  +================+ --------------------------------------------
+  //         |                |                          |
+  //         |   debuginfo    |                          |
+  //         |(variable info) |                          |
+  //         |                |                      debuginfo
+  //         |                |       present if LUAJIT_DISABLE_DEBUGINFO defined
+  //         +================+                          |
+  //         |                |                          |
+  //         |   debuginfo    |                          |
+  //         |  (line info)   |                          |
+  //         |                |                          |
+  //         |                |                          |
+  //         +================+ --------------------------------------------
+  //         |                |                          |
+  //         |                |                          |
+  //         |    upvalues    |                          |
+  //         |                |                  4:    upvalues
+  //         |                |                          |
+  //         |                |                          |
+  //         +================+  -------------------------------------------
+  //         |     TValue     | fs->nkn - 1              |
+  //         +----------------+                          |
+  //         |......          | ...                      |
+  //         +----------------+                  3: lua_Number constants
+  //         |     TValue     | 1                        |
+  //         +----------------+                          |
+  //         |     TValue     | 0                        |
+  //         +================+ --------------------------------------------
+  //         |     GCRef      | fs->nkgc - 1             |
+  //         +----------------+                          |
+  //         |......          | ...                      |
+  //         +----------------+                  2: GCobj constants
+  //         |     GCRef      | 1                        |
+  //         +----------------+                          |
+  //         |     GCRef      | 0                        |
+  //         +================+ --------------------------------------------
+  //         |||||||||||||||||| padding, aligned to sizeof(TValue)
+  //         +================+ --------------------------------------------
+  //         |     BCIns      | fs->pc - 1               |
+  //         +----------------+                          |
+  //         |......          | ...                      |
+  //         +----------------+                  1: byte code instructions
+  //         |     BCIns      | 1                        |
+  //         +----------------+                          |
+  //         |     BCIns      | 0                        |
+  //         +================+ --------------------------------------------
+  //         |                |
+  //         |                |
+  //         | struct GCproto |
+  //         |                |
+  //         |                |
+  //    low  +================+
+
   /* Calculate total size of prototype including all colocated arrays. */
   sizept = sizeof(GCproto) + fs->pc*sizeof(BCIns) + fs->nkgc*sizeof(GCRef);
-  sizept = (sizept + sizeof(TValue)-1) & ~(sizeof(TValue)-1);
+  sizept = (sizept + sizeof(TValue)-1) & ~(sizeof(TValue)-1); //Yuanguo:  aligned to sizeof(TValue)
   ofsk = sizept; sizept += fs->nkn*sizeof(TValue);
-  ofsuv = sizept; sizept += ((fs->nuv+1)&~1)*2;
+  ofsuv = sizept; sizept += ((fs->nuv+1)&~1)*2;               //Yuanguo:  (x+1)&~1: 4->4, 5->6, 6->6, 7->8, 8->8 ...
   ofsli = sizept; sizept += fs_prep_line(fs, numline);
   ofsdbg = sizept; sizept += fs_prep_var(ls, fs, &ofsvar);
 
@@ -1578,12 +1633,13 @@ static GCproto *fs_finish(LexState *ls, BCLine line)
   setgcref(pt->chunkname, obj2gco(ls->chunkname));
 
   /* Close potentially uninitialized gap between bc and kgc. */
-  *(uint32_t *)((char *)pt + ofsk - sizeof(GCRef)*(fs->nkgc+1)) = 0;
-  fs_fixup_bc(fs, pt, (BCIns *)((char *)pt + sizeof(GCproto)), fs->pc);
-  fs_fixup_k(fs, pt, (void *)((char *)pt + ofsk));
-  fs_fixup_uv1(fs, pt, (uint16_t *)((char *)pt + ofsuv));
-  fs_fixup_line(fs, pt, (void *)((char *)pt + ofsli), numline);
-  fs_fixup_var(ls, pt, (uint8_t *)((char *)pt + ofsdbg), ofsvar);
+  *(uint32_t *)((char *)pt + ofsk - sizeof(GCRef)*(fs->nkgc+1)) = 0;    //Yuanguo: set padding space to 0;
+
+  fs_fixup_bc(fs, pt, (BCIns *)((char *)pt + sizeof(GCproto)), fs->pc); //Yuanguo: copy byte code instructions from fs to space following GCproto;
+  fs_fixup_k(fs, pt, (void *)((char *)pt + ofsk));                      //Yuanguo: copy GCobj constants and lua_Number constants;
+  fs_fixup_uv1(fs, pt, (uint16_t *)((char *)pt + ofsuv));               //Yuanguo: copy upvalues;
+  fs_fixup_line(fs, pt, (void *)((char *)pt + ofsli), numline);         //Yuanguo: copy line info;
+  fs_fixup_var(ls, pt, (uint8_t *)((char *)pt + ofsdbg), ofsvar);       //Yuanguo: copy variable info;
 
   lj_vmevent_send(L, BC,
     setprotoV(L, L->top++, pt);
@@ -2625,6 +2681,7 @@ static void parse_if(LexState *ls, BCLine line)
 static int parse_stmt(LexState *ls)
 {
   BCLine line = ls->linenumber;
+  //Yuanguo: for definition of TK_if, TK_while ..., see TKDEF in lj_lex.h;
   switch (ls->tok) {
   case TK_if:
     parse_if(ls, line);
