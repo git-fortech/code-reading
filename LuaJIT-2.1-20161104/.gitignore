@@ -12,3 +12,11 @@
 *~
 tags
 *.swo
+.cscope.files
+.cscope.out
+.cscope.out.in
+.cscope.out.po
+.filenametags
+.working.session
+rebuild_workspace.sh
+
