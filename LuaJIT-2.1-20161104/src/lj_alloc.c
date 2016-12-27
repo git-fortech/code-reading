@@ -141,6 +141,7 @@ static void init_mmap(void)
 }
 #define INIT_MMAP()	init_mmap()
 
+#error "Yuanguo, not here"
 /* Win64 32 bit MMAP via NtAllocateVirtualMemory. */
 static void *CALL_MMAP(size_t size)
 {
@@ -165,6 +166,7 @@ static void *DIRECT_MMAP(size_t size)
 
 #else
 
+#error "Yuanguo, not here"
 /* Win32 MMAP via VirtualAlloc */
 static void *CALL_MMAP(size_t size)
 {
@@ -369,6 +371,7 @@ static void *CALL_MMAP(size_t size)
 
 #if (defined(__FreeBSD__) || defined(__FreeBSD_kernel__)) && !LJ_TARGET_PS4
 
+#error "Yuanguo, not here!"
 #include <sys/resource.h>
 
 static void init_mmap(void)
@@ -413,7 +416,7 @@ static void *CALL_MREMAP_(void *ptr, size_t osz, size_t nsz, int flags)
 
 
 #ifndef INIT_MMAP
-#define INIT_MMAP()		((void)0)
+#define INIT_MMAP()		((void)0)   //Yuanguo, this one is used in centos x64!
 #endif
 
 #ifndef DIRECT_MMAP
@@ -925,11 +928,53 @@ static void init_top(mstate m, mchunkptr p, size_t psize)
 /* Initialize bins for a new mstate that is otherwise zeroed out */
 static void init_bins(mstate m)
 {
+  //Yuanguo:
+  //   high             
+  //          +-----------------+
+  //          | &smallbins[62]  | 
+  //          +-----------------+  smallbins[65]
+  //          | &smallbins[62]  | 
+  //          +-----------------+  smallbins[64]
+  //          | &smallbins[60]  | 
+  //          +-----------------+  smallbins[63]
+  //          | &smallbins[60]  | 
+  //          +-----------------+  smallbins[62]
+  //          ......
+  //          +-----------------+  smallbins[10]
+  //          | &smallbins[6]   | 
+  //          +-----------------+  smallbins[9]
+  //          | &smallbins[6]   | 
+  //          +-----------------+  smallbins[8]
+  //          | &smallbins[4]   | 
+  //          +-----------------+  smallbins[7]
+  //          | &smallbins[4]   | 
+  //          +-----------------+  smallbins[6]
+  //          | &smallbins[2]   | 
+  //          +-----------------+  smallbins[5]
+  //          | &smallbins[2]   | 
+  //          +-----------------+  smallbins[4]
+  //          | &smallbins[0]   |   -----------------------+
+  //          +-----------------+  smallbins[3]            |
+  //          | &smallbins[0]   |   -----------------------+ 
+  //          +-----------------+  smallbins[2]            |
+  //          |                 |                          |
+  //          +-----------------+  smallbins[1]            |
+  //          |                 |                          |
+  //          +-----------------+  smallbins[0]  <---------+
+  //   low
+  //          struct malloc_state
+
   /* Establish circular links for smallbins */
   bindex_t i;
   for (i = 0; i < NSMALLBINS; i++) {
-    sbinptr bin = smallbin_at(m,i);
-    bin->fd = bin->bk = bin;
+    sbinptr bin = smallbin_at(m,i); //Yuanguo: in fact, type of "bin" is malloc_chunk **, but it's forced into malloc_chunk *;
+    bin->fd = bin->bk = bin;        //Yuanguo: if "bin" is the address of smallbins[k], then smallbins[k+2]=bin, smallbins[k+3]=bin;
+  }
+
+  //Yuanguo: print 
+  for (i=0; i<(NSMALLBINS+1)*2; i++)
+  {
+    dd("&smallbins[%zu]=%p \t smallbins[%zu]=%p\n", i, m->smallbins+i, i, *(m->smallbins+i));
   }
 }
 
@@ -1260,6 +1305,57 @@ static void *tmalloc_small(mstate m, size_t nb)
 
 void *lj_alloc_create(void)
 {
+  //Yuanguo: 
+  //
+  //        +====================+ tbase + tsize
+  //        |                    |
+  //        |                    |
+  //        |                    |
+  //        |                    |
+  //        |                    |
+  //        |                    |
+  //        |                    |
+  //        |                    |
+  //        |                    |
+  //        |                    |
+  //        ......
+  //        |                    |
+  //        |                    |
+  //        |                    |
+  //        |                    |
+  //        |                    |
+  //        |                    |
+  //        +====================+  -------------------------------
+  //        |   CHUNK_OVERHEAD   |                  |
+  //        +====================+                  |
+  // +--> mn|   seg.next         |                  |
+  // |      |   seg.size=tsize   |                  |
+  // |      |   seg.base=tbase   |                  | 
+  // |      +--------------------+                  |
+  // |      |                    |                  |
+  // |      |                    |                  |
+  // |      |                    |                  |
+  // |      |                    |                  |
+  // |      |                    |                  |
+  // |      |                    |                  |
+  // +------+ top= &seg.next     |                  |
+  //        |                    |                  |
+  //        |struct malloc_state |                msize   
+  //        |                    |                  |
+  //        |                    |                  |
+  //        |                    |                  |
+  //        |                    |                  |
+  //        |                    |                  |
+  //        |                    |                  |
+  //        |                    |                  |
+  //        +====================+  msp+16 <---------------------- m
+  //        |     head           |                  |
+  //        +--------------------+  msp+8   struct malloc_chunk without fd, bk
+  //        |     prev_foot      |                  |
+  //        +====================+  msp --------------------------
+  //        ||||||||||||||||||||||  padding for alignment
+  //  low   +--------------------+  tbase
+
   dd("Enter");
   size_t tsize = DEFAULT_GRANULARITY;
   char *tbase;
@@ -1277,7 +1373,9 @@ void *lj_alloc_create(void)
     m->release_checks = MAX_RELEASE_CHECK_RATE;
     init_bins(m);
     mn = next_chunk(mem2chunk(m));
+    dd("tbase=%p msp=%p m=%p mn=%p &m->seg.next=%p\n", tbase, msp, m, mn, &m->seg.next);
     init_top(m, mn, (size_t)((tbase + tsize) - (char *)mn) - TOP_FOOT_SIZE);
+    dd("m->top=%p &(m->seg.next)=%p m->topsize=%zu \n", m->top, &(m->seg.next), m->topsize);
     dd("Exit 1");
     return m;
   }
@@ -1302,7 +1400,7 @@ static LJ_NOINLINE void *lj_alloc_malloc(void *msp, size_t nsize)
   mstate ms = (mstate)msp;
   void *mem;
   size_t nb;
-  if (nsize <= MAX_SMALL_REQUEST) {
+  if (nsize <= MAX_SMALL_REQUEST) {  //Yuanguo: MAX_SMALL_REQUEST = 240
     bindex_t idx;
     binmap_t smallbits;
     nb = (nsize < MIN_REQUEST)? MIN_CHUNK_SIZE : pad_request(nsize);
