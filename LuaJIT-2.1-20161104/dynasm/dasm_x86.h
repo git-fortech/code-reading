@@ -9,6 +9,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "yuanguodebug.h"
+
 #define DASM_ARCH		"x86"
 
 #ifndef DASM_EXTERN
@@ -166,6 +168,7 @@ void dasm_setup(Dst_DECL, const void *actionlist)
 /* Pass 1: Store actions and args, link branches/labels, estimate offsets. */
 void dasm_put(Dst_DECL, int start, ...)
 {
+  dd("Enter");
   va_list ap;
   dasm_State *D = Dst_REF;
   dasm_ActList p = D->actionlist + start;
@@ -266,6 +269,8 @@ stop:
   va_end(ap);
   sec->pos = pos;
   sec->ofs = ofs;
+
+  dd("Exit");
 }
 #undef CK
 
