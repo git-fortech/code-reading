@@ -173,6 +173,7 @@ typedef LJ_ALIGN(8) union TValue {
   uint64_t u64;		/* 64 bit pattern overlaps number. */
   lua_Number n;		/* Number object overlaps split tag/value object. */
 #if LJ_GC64
+#error "Yuanguo, not here"
   GCRef gcr;		/* GCobj reference with tag. */
   int64_t it64;
   struct {
@@ -193,6 +194,7 @@ typedef LJ_ALIGN(8) union TValue {
   };
 #endif
 #if LJ_FR2
+#error "Yuanguo, not here"
   int64_t ftsz;		/* Frame type and size of previous frame, or PC. */
 #else
   struct {
@@ -684,8 +686,10 @@ struct lua_State {
 
 /* Macros to access the currently executing (Lua) function. */
 #if LJ_GC64
+#error "Not here"
 #define curr_func(L)		(&gcval(L->base-2)->fn)
 #elif LJ_FR2
+#error "Not here"
 #define curr_func(L)		(&gcref((L->base-2)->gcr)->fn)
 #else
 #define curr_func(L)		(&gcref((L->base-1)->fr.func)->fn)
