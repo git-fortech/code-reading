@@ -100,6 +100,8 @@ ngx_conf_param(ngx_conf_t *cf)
 char *
 ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
 {
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Enter, filename=%s", __FILE__,__LINE__,__func__, (filename!=NULL?((char*)filename->data):"null"));
+
     char             *rv;
     u_char           *p;
     off_t             size;
@@ -128,6 +130,7 @@ ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
             ngx_conf_log_error(NGX_LOG_EMERG, cf, ngx_errno,
                                ngx_open_file_n " \"%s\" failed",
                                filename->data);
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
             return NGX_CONF_ERROR;
         }
 
@@ -309,9 +312,11 @@ done:
     }
 
     if (rc == NGX_ERROR) {
+        ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
         return NGX_CONF_ERROR;
     }
 
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
     return NGX_CONF_OK;
 }
 

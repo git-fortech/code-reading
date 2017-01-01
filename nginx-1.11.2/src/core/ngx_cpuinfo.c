@@ -11,11 +11,13 @@
 
 #if (( __i386__ || __amd64__ ) && ( __GNUC__ || __INTEL_COMPILER ))
 
+//Yuanguo: we have this!   
 
 static ngx_inline void ngx_cpuid(uint32_t i, uint32_t *buf);
 
 
 #if ( __i386__ )
+#error "Yuanguo: not here"
 
 static ngx_inline void
 ngx_cpuid(uint32_t i, uint32_t *buf)
@@ -45,6 +47,7 @@ ngx_cpuid(uint32_t i, uint32_t *buf)
 
 #else /* __amd64__ */
 
+//Yuanguo: we have this!
 
 static ngx_inline void
 ngx_cpuid(uint32_t i, uint32_t *buf)
@@ -69,6 +72,7 @@ ngx_cpuid(uint32_t i, uint32_t *buf)
 
 /* auto detect the L2 cache line size of modern and widespread CPUs */
 
+//Yuanguo: we have this
 void
 ngx_cpuinfo(void)
 {
@@ -129,6 +133,7 @@ ngx_cpuinfo(void)
 
 #else
 
+#error "Yuanguo, not here"
 
 void
 ngx_cpuinfo(void)

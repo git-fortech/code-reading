@@ -572,6 +572,8 @@ ngx_add_path(ngx_conf_t *cf, ngx_path_t **slot)
 ngx_int_t
 ngx_create_paths(ngx_cycle_t *cycle, ngx_uid_t user)
 {
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Enter", __FILE__,__LINE__,__func__);
+
     ngx_err_t         err;
     ngx_uint_t        i;
     ngx_path_t      **path;
@@ -579,12 +581,14 @@ ngx_create_paths(ngx_cycle_t *cycle, ngx_uid_t user)
     path = cycle->paths.elts;
     for (i = 0; i < cycle->paths.nelts; i++) {
 
+        ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s create %s", __FILE__,__LINE__,__func__, path[i]->name.data);
         if (ngx_create_dir(path[i]->name.data, 0700) == NGX_FILE_ERROR) {
             err = ngx_errno;
             if (err != NGX_EEXIST) {
                 ngx_log_error(NGX_LOG_EMERG, cycle->log, err,
                               ngx_create_dir_n " \"%s\" failed",
                               path[i]->name.data);
+                ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_ERROR;
             }
         }
@@ -602,6 +606,7 @@ ngx_create_paths(ngx_cycle_t *cycle, ngx_uid_t user)
         {
             ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_errno,
                           ngx_file_info_n " \"%s\" failed", path[i]->name.data);
+            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
             return NGX_ERROR;
         }
 
@@ -610,6 +615,7 @@ ngx_create_paths(ngx_cycle_t *cycle, ngx_uid_t user)
                 ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_errno,
                               "chown(\"%s\", %d) failed",
                               path[i]->name.data, user);
+                ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_ERROR;
             }
         }
@@ -622,6 +628,7 @@ ngx_create_paths(ngx_cycle_t *cycle, ngx_uid_t user)
             if (chmod((const char *) path[i]->name.data, fi.st_mode) == -1) {
                 ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_errno,
                               "chmod() \"%s\" failed", path[i]->name.data);
+                ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_ERROR;
             }
         }
@@ -629,6 +636,7 @@ ngx_create_paths(ngx_cycle_t *cycle, ngx_uid_t user)
 #endif
     }
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
     return NGX_OK;
 }
 

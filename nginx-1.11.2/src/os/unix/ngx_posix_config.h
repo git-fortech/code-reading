@@ -142,6 +142,7 @@ typedef struct aiocb  ngx_aiocb_t;
 
 #define NGX_LISTEN_BACKLOG  511
 
+#error "Yuanguo, not here"
 #define ngx_debug_init()
 
 

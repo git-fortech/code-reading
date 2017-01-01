@@ -403,18 +403,24 @@ ngx_log_init(u_char *prefix)
 ngx_int_t
 ngx_log_open_default(ngx_cycle_t *cycle)
 {
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Enter", __FILE__,__LINE__,__func__);
+
     ngx_log_t         *log;
     static ngx_str_t   error_log = ngx_string(NGX_ERROR_LOG_PATH);
 
     if (ngx_log_get_file_log(&cycle->new_log) != NULL) {
+        ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
         return NGX_OK;
     }
+
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s new_log.log_level=%u", __FILE__,__LINE__,__func__, cycle->new_log.log_level);
 
     if (cycle->new_log.log_level != 0) {
         /* there are some error logs, but no files */
 
         log = ngx_pcalloc(cycle->pool, sizeof(ngx_log_t));
         if (log == NULL) {
+            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
             return NGX_ERROR;
         }
 
@@ -425,8 +431,10 @@ ngx_log_open_default(ngx_cycle_t *cycle)
 
     log->log_level = NGX_LOG_ERR;
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s open %s", __FILE__,__LINE__,__func__, error_log.data);
     log->file = ngx_conf_open_file(cycle, &error_log);
     if (log->file == NULL) {
+        ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
         return NGX_ERROR;
     }
 
@@ -434,6 +442,7 @@ ngx_log_open_default(ngx_cycle_t *cycle)
         ngx_log_insert(&cycle->new_log, log);
     }
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
     return NGX_OK;
 }
 

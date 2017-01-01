@@ -36,6 +36,8 @@ static ngx_connection_t  dumb;
 ngx_cycle_t *
 ngx_init_cycle(ngx_cycle_t *old_cycle)
 {
+    ngx_log_error(NGX_LOG_EMERG, old_cycle->log, 0, "YuanguoDbg %s:%d %s Enter", __FILE__,__LINE__,__func__);
+
     void                *rv;
     char               **senv, **env;
     ngx_uint_t           i, n;
@@ -87,12 +89,16 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s conf_prefix=%s", __FILE__,__LINE__,__func__, cycle->conf_prefix.data);
+
     cycle->prefix.len = old_cycle->prefix.len;
     cycle->prefix.data = ngx_pstrdup(pool, &old_cycle->prefix);
     if (cycle->prefix.data == NULL) {
         ngx_destroy_pool(pool);
         return NULL;
     }
+
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s prefix=%s", __FILE__,__LINE__,__func__, cycle->prefix.data);
 
     cycle->conf_file.len = old_cycle->conf_file.len;
     cycle->conf_file.data = ngx_pnalloc(pool, old_cycle->conf_file.len + 1);
@@ -103,6 +109,8 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     ngx_cpystrn(cycle->conf_file.data, old_cycle->conf_file.data,
                 old_cycle->conf_file.len + 1);
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s conf_file=%s", __FILE__,__LINE__,__func__, cycle->conf_file.data);
+
     cycle->conf_param.len = old_cycle->conf_param.len;
     cycle->conf_param.data = ngx_pstrdup(pool, &old_cycle->conf_param);
     if (cycle->conf_param.data == NULL) {
@@ -110,6 +118,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s conf_param=%s", __FILE__,__LINE__,__func__, cycle->conf_param.data);
 
     n = old_cycle->paths.nelts ? old_cycle->paths.nelts : 10;
 
@@ -211,6 +220,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
     ngx_strlow(cycle->hostname.data, (u_char *) hostname, cycle->hostname.len);
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s hostname=%s", __FILE__,__LINE__,__func__, cycle->hostname.data);
 
     if (ngx_cycle_modules(cycle) != NGX_OK) {
         ngx_destroy_pool(pool);
@@ -218,6 +228,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     }
 
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call create_conf() of core modules", __FILE__,__LINE__,__func__);
     for (i = 0; cycle->modules[i]; i++) {
         if (cycle->modules[i]->type != NGX_CORE_MODULE) {
             continue;
@@ -226,6 +237,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         module = cycle->modules[i]->ctx;
 
         if (module->create_conf) {
+            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call create_conf() of module %s", __FILE__,__LINE__,__func__, module->name.data);
             rv = module->create_conf(cycle);
             if (rv == NULL) {
                 ngx_destroy_pool(pool);
@@ -271,6 +283,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s parse conf file", __FILE__,__LINE__,__func__);
     if (ngx_conf_parse(&conf, &cycle->conf_file) != NGX_CONF_OK) {
         environ = senv;
         ngx_destroy_cycle_pools(&conf);
@@ -282,6 +295,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
                        cycle->conf_file.data);
     }
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call init_conf() of core modules", __FILE__,__LINE__,__func__);
     for (i = 0; cycle->modules[i]; i++) {
         if (cycle->modules[i]->type != NGX_CORE_MODULE) {
             continue;
@@ -290,6 +304,8 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         module = cycle->modules[i]->ctx;
 
         if (module->init_conf) {
+
+            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call init_conf() of module %s", __FILE__,__LINE__,__func__, module->name.data);
             if (module->init_conf(cycle,
                                   cycle->conf_ctx[cycle->modules[i]->index])
                 == NGX_CONF_ERROR)
@@ -309,11 +325,13 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
     if (ngx_test_config) {
 
+        ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s ngx_test_config", __FILE__,__LINE__,__func__);
         if (ngx_create_pidfile(&ccf->pid, log) != NGX_OK) {
             goto failed;
         }
 
     } else if (!ngx_is_init_cycle(old_cycle)) {
+        ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s old_cycle not init cycle", __FILE__,__LINE__,__func__);
 
         /*
          * we do not create the pid file in the first ngx_init_cycle() call
@@ -352,6 +370,8 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
     /* open the new files */
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s open the new files", __FILE__,__LINE__,__func__);
+
     part = &cycle->open_files.part;
     file = part->elts;
 
@@ -369,6 +389,9 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         if (file[i].name.len == 0) {
             continue;
         }
+
+
+        ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s open %s", __FILE__,__LINE__,__func__, file[i].name.data);
 
         file[i].fd = ngx_open_file(file[i].name.data,
                                    NGX_FILE_APPEND,
@@ -402,6 +425,8 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
     /* create shared memory */
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s create shared memory", __FILE__,__LINE__,__func__);
+
     part = &cycle->shared_memory.part;
     shm_zone = part->elts;
 
@@ -422,6 +447,8 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
                           &shm_zone[i].shm.name);
             goto failed;
         }
+
+        ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s shm_zone[%u].shm.name=%s", __FILE__,__LINE__,__func__, i, shm_zone[i].shm.name.data);
 
         shm_zone[i].shm.log = cycle->log;
 
@@ -466,6 +493,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
                     goto failed;
                 }
 
+                ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s shm_zone_found", __FILE__,__LINE__,__func__);
                 goto shm_zone_found;
             }
 
@@ -493,6 +521,8 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
 
     /* handle the listening sockets */
+
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s handle the listening sockets", __FILE__,__LINE__,__func__);
 
     if (old_cycle->listening.nelts) {
         ls = old_cycle->listening.elts;
@@ -623,6 +653,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
     pool->log = cycle->log;
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s init modules", __FILE__,__LINE__,__func__);
     if (ngx_init_modules(cycle) != NGX_OK) {
         /* fatal */
         exit(1);
@@ -1060,6 +1091,7 @@ static ngx_int_t
 ngx_test_lockfile(u_char *file, ngx_log_t *log)
 {
 #if !(NGX_HAVE_ATOMIC_OPS)
+#error "Yuanguo, not here"
     ngx_fd_t  fd;
 
     fd = ngx_open_file(file, NGX_FILE_RDWR, NGX_FILE_CREATE_OR_OPEN,

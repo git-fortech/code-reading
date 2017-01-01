@@ -73,6 +73,7 @@ ngx_os_init(ngx_log_t *log)
 #if (NGX_HAVE_INHERITED_NONBLOCK || NGX_HAVE_ACCEPT4)
     ngx_inherited_nonblocking = 1;
 #else
+#error "Yuanguo, not here"
     ngx_inherited_nonblocking = 0;
 #endif
 

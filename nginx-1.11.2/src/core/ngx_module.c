@@ -53,6 +53,8 @@ ngx_cycle_modules(ngx_cycle_t *cycle)
         return NGX_ERROR;
     }
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s copy ngx_modules to cycle->modules, cycle->modules_n=%u", __FILE__,__LINE__,__func__, cycle->prefix.data, ngx_modules_n);
+
     ngx_memcpy(cycle->modules, ngx_modules,
                ngx_modules_n * sizeof(ngx_module_t *));
 
@@ -65,16 +67,25 @@ ngx_cycle_modules(ngx_cycle_t *cycle)
 ngx_int_t
 ngx_init_modules(ngx_cycle_t *cycle)
 {
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Enter", __FILE__,__LINE__,__func__);
+
     ngx_uint_t  i;
 
     for (i = 0; cycle->modules[i]; i++) {
         if (cycle->modules[i]->init_module) {
+            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call init_module() of module %s", __FILE__,__LINE__,__func__, cycle->modules[i]->name);
             if (cycle->modules[i]->init_module(cycle) != NGX_OK) {
+                ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_ERROR;
             }
         }
+        else
+        {
+            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s module %s does not have init_module() function", __FILE__,__LINE__,__func__, cycle->modules[i]->name);
+        }
     }
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
     return NGX_OK;
 }
 

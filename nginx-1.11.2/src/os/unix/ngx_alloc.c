@@ -46,7 +46,7 @@ ngx_calloc(size_t size, ngx_log_t *log)
 }
 
 
-#if (NGX_HAVE_POSIX_MEMALIGN)
+#if (NGX_HAVE_POSIX_MEMALIGN)    //Yuanguo: we have this on linux;
 
 void *
 ngx_memalign(size_t alignment, size_t size, ngx_log_t *log)
@@ -69,7 +69,7 @@ ngx_memalign(size_t alignment, size_t size, ngx_log_t *log)
 }
 
 #elif (NGX_HAVE_MEMALIGN)
-
+#error "Yuanguo, not here"
 void *
 ngx_memalign(size_t alignment, size_t size, ngx_log_t *log)
 {

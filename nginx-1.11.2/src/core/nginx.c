@@ -961,10 +961,13 @@ ngx_process_options(ngx_cycle_t *cycle)
 static void *
 ngx_core_module_create_conf(ngx_cycle_t *cycle)
 {
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Enter", __FILE__,__LINE__,__func__);
+
     ngx_core_conf_t  *ccf;
 
     ccf = ngx_pcalloc(cycle->pool, sizeof(ngx_core_conf_t));
     if (ccf == NULL) {
+        ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
         return NULL;
     }
 
@@ -995,9 +998,11 @@ ngx_core_module_create_conf(ngx_cycle_t *cycle)
     if (ngx_array_init(&ccf->env, cycle->pool, 1, sizeof(ngx_str_t))
         != NGX_OK)
     {
+        ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
         return NULL;
     }
 
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
     return ccf;
 }
 
