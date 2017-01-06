@@ -22,6 +22,27 @@ static ngx_inline void ngx_cpuid(uint32_t i, uint32_t *buf);
 static ngx_inline void
 ngx_cpuid(uint32_t i, uint32_t *buf)
 {
+  // Yuanguo:
+  // cpuid: a processor supplementary instruction (its name derived from CPU IDentification) for the x86 architecture allowing 
+  //        software to discover details of the processor.
+  //                   input:  eax, the function parameter 
+  //                   output: eax ebx edx ecx
+  // if eax = 0 then output is:
+  //       eax: the max basic function parameter
+  //              for Intel     for AMD
+  //       ebx:    "Genu"        "Auth"
+  //       edx:    "ineI"        "enti"
+  //       ecx:    "ntel"        "cAMD"
+  // if eax = 1 then output is:
+  //       eax          : stepping, model, and family information
+  //                         3:0   – Stepping
+  //                         7:4   – Model
+  //                         11:8  – Family
+  //                         13:12 – Processor Type
+  //                         19:16 – Extended Model
+  //                         27:20 – Extended Family
+  //       ebx          : additional feature info
+  //       edx and ecx  : feature flags
 
     /*
      * we could not use %ebx as output parameter if gcc builds PIC,
@@ -97,7 +118,7 @@ ngx_cpuinfo(void)
 
     if (ngx_strcmp(vendor, "GenuineIntel") == 0) {
 
-        switch ((cpu[0] & 0xf00) >> 8) {
+        switch ((cpu[0] & 0xf00) >> 8) {    //Yuanguo: 8-11 bits, CPU family. see ngx_cpuid.
 
         /* Pentium */
         case 5:
