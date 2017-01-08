@@ -135,10 +135,11 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
     ngx_uint_t                 i;
     ngx_listening_t           *ls;
     socklen_t                  olen;
-#if (NGX_HAVE_DEFERRED_ACCEPT || NGX_HAVE_TCP_FASTOPEN)
+#if (NGX_HAVE_DEFERRED_ACCEPT || NGX_HAVE_TCP_FASTOPEN)   //Yuanguo: we have NGX_HAVE_DEFERRED_ACCEPT and NGX_HAVE_TCP_FASTOPEN
     ngx_err_t                  err;
 #endif
 #if (NGX_HAVE_DEFERRED_ACCEPT && defined SO_ACCEPTFILTER)
+#error "Yuanguo: FreeBSD has SO_ACCEPTFILTER. it's equivalent to TCP_DEFER_ACCEPT of linux"
     struct accept_filter_arg   af;
 #endif
 #if (NGX_HAVE_DEFERRED_ACCEPT && defined TCP_DEFER_ACCEPT)
@@ -156,8 +157,8 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
             return NGX_ERROR;
         }
 
-        ls[i].socklen = sizeof(ngx_sockaddr_t);
-        if (getsockname(ls[i].fd, ls[i].sockaddr, &ls[i].socklen) == -1) {
+        ls[i].socklen = sizeof(ngx_sockaddr_t);   //Yuanguo: ls[i].socklen is set to the amount of the space;
+        if (getsockname(ls[i].fd, ls[i].sockaddr, &ls[i].socklen) == -1) {   //Yuanguo: ls[i].socklen will be set to the actual length; 
             ngx_log_error(NGX_LOG_CRIT, cycle->log, ngx_socket_errno,
                           "getsockname() of the inherited "
                           "socket #%d failed", ls[i].fd);
@@ -211,6 +212,7 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
 
         olen = sizeof(int);
 
+        //Yuanguo: SO_TYPE: get the socket type as an integer (e.g., SOCK_STREAM). This socket option is read-only.
         if (getsockopt(ls[i].fd, SOL_SOCKET, SO_TYPE, (void *) &ls[i].type,
                        &olen)
             == -1)
@@ -223,6 +225,12 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
 
         olen = sizeof(int);
 
+        //Yuanguo: SO_RCVBUF: 
+        //  set or get the maximum socket receive buffer in bytes. The kernel doubles this value (toallow space for 
+        //  bookkeeping overhead) when it is set using setsockopt, and this doubled value is returned by getsockopt. 
+        //  The default value is set by the /proc/sys/net/core/rmem_default file; 
+        //  And the maximum allowed value is set by the /proc/sys/net/core/rmem_max file; 
+        //  The minimum (doubled) value for this option is 256;
         if (getsockopt(ls[i].fd, SOL_SOCKET, SO_RCVBUF, (void *) &ls[i].rcvbuf,
                        &olen)
             == -1)
@@ -236,6 +244,12 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
 
         olen = sizeof(int);
 
+        //Yuanguo: SO_SNDBUF:
+        //  set or get the maximum socket send buffer in bytes. The kernel doubles this value (to allow space for 
+        //  bookkeeping overhead) when it is set using setsockopt, and this doubled value is returned by getsockopt.  
+        //  The default value is set by the /proc/sys/net/core/wmem_default file;
+        //  And the maximum allowed value is set by the /proc/sys/net/core/wmem_max file;
+        //  The minimum (doubled) value for this option is 2048;
         if (getsockopt(ls[i].fd, SOL_SOCKET, SO_SNDBUF, (void *) &ls[i].sndbuf,
                        &olen)
             == -1)
@@ -268,7 +282,60 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
 #endif
 #endif
 
-#if (NGX_HAVE_REUSEPORT)
+#if (NGX_HAVE_REUSEPORT)   //Yuanguo: Linux has this since 3.9
+        //Yuanguo:
+        // Linux 3.9 added the option SO_REUSEPORT to Linux as well. This option allows 
+        // two or more sockets, TCP or UDP, listening (server) or non-listening (client), 
+        // to be bound to exactly the same address and port combination as long as all 
+        // sockets (including the very first one) had this flag set prior to binding them. 
+        // To prevent "port hijacking", there is one special limitation, though: All sockets 
+        // that want to share the same address and port combination must belong to processes 
+        // that share the same effective user ID! So one user cannot "steal" ports of another 
+        // user.
+        // Additionally Linux performs some "special magic" for SO_REUSEPORT sockets that isn't 
+        // found in any other operating system so far: for UDP sockets, it tries to distribute 
+        // datagrams evenly; for TCP listening sockets, it tries to distribute incoming connect-
+        // requests evenly across all the sockets that share the same address and port combination. 
+        // That means Linux tries to optimize distribution so that, for example, multiple instances 
+        // of a server process (Yuanguo: nginx?) can easily use SO_REUSEPORT sockets to achieve a 
+        // kind of simple load balancing absolutely for free as the kernel is doing "all the hard 
+        // work" for them.
+        //
+        //Yuanguo: compare with SO_REUSEADDR:
+        // SO_REUSEADDR can achieve address reuse also. It was created before SO_REUSEPORT, so it is
+        // not as powerful as SO_REUSEPORT. Basically, it has two effects:
+        // 1. If a socket has bound to "ANY-ADDR" and a specific port, another socket can bind to a
+        //    specific addr and the same port; with two exceptions: 
+        //    a. if a listening (server) TCP socket is already bound to a "ANY-ADDR" and a specific 
+        //       port, no other TCP socket can be bound to the same port (with either "ANY-ADDR" or a 
+        //       specific port). This restriction does not apply to non-listening (client) TCP sockets, 
+        //       and it is also OK to with the order exchanged: first bind a listening TCP socket to a 
+        //       specific address and port, then bind another socket to "ANY-ADDR" and the same port;
+        //    b. for UDP sockets it behaves exactly like SO_REUSEPORT in BSD: two UDP sockets can be 
+        //       bound to exactly the same address and port as long as both had this flag set before 
+        //       they were bound.
+        // 2. A socket has a send buffer, and it will go to a state called "TIME_WAIT" when it's closed
+        //    with send buffer not empty. The socket is not really closed util the buffer is flushed or
+        //    a timeout called Linger Time is elpased. During this time period, you cannot bind a new 
+        //    socket to the same address and port unless SO_REUSEADDR is set to the "new socket".
+        //    
+        //Yuanguo: important!!!!!!
+        // SO_REUSEADDR: you just need to set it on the socket you're binding. That's, you don't need to 
+        //               care about if the sockets that already bound to the same address and port had 
+        //               SO_REUSEADDR set or not.
+        // SO_REUSEPORT: all sockets bound to the same address and port must have this flag set!
+        //
+        //Yuanguo: connect behavior in the case of address reuse:
+        // Most people know that bind() may fail with the error EADDRINUSE, however, when you start 
+        // playing around with address reuse, you may run into the strange situation that connect() 
+        // fails with that error as well. How can this be?
+        // A connection is defined by a tuple of five values:
+        //     [PROTOCOL, SRC-ADDR, SRC-PORT, DST-ADDR, DST-PORT]
+        // thus, with address reuse, you can bind two sockets of the same protocol to the same address
+        // and port, that means three values (PROTOCOL, SRC-ADDR and SRC-PORT) in five are already the 
+        // same, if you now try to connect both of the two sockets to the same destination address and 
+        // port, you would create two connections, whose tuples are absolutely identical. This cannot 
+        // work, at least not for TCP.
 
         reuseport = 0;
         olen = sizeof(int);
@@ -803,9 +870,10 @@ ngx_configure_listening_sockets(ngx_cycle_t *cycle)
          * because code may prematurely continue cycle on failure
          */
 
-#if (NGX_HAVE_DEFERRED_ACCEPT)
+#if (NGX_HAVE_DEFERRED_ACCEPT)   //Yuanguo: we have NGX_HAVE_DEFERRED_ACCEPT
 
 #ifdef SO_ACCEPTFILTER
+#error "Yuanguo: FreeBSD has SO_ACCEPTFILTER. it's equivalent to TCP_DEFER_ACCEPT of linux"
 
         if (ls[i].delete_deferred) {
             if (setsockopt(ls[i].fd, SOL_SOCKET, SO_ACCEPTFILTER, NULL, 0)

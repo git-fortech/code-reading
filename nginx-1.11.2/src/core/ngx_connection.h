@@ -28,7 +28,7 @@ struct ngx_listening_s {
     int                 backlog;
     int                 rcvbuf;
     int                 sndbuf;
-#if (NGX_HAVE_KEEPALIVE_TUNABLE)
+#if (NGX_HAVE_KEEPALIVE_TUNABLE)     //Yuanguo: we have this
     int                 keepidle;
     int                 keepintvl;
     int                 keepcnt;
