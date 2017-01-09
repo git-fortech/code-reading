@@ -783,6 +783,8 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 *dst = '\0';
                 word->len = len;
 
+                ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s got word:%s", __FILE__,__LINE__,__func__, word->data);
+
                 if (ch == ';') {
                     return NGX_OK;
                 }
