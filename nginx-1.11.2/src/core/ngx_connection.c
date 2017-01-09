@@ -226,7 +226,7 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
         olen = sizeof(int);
 
         //Yuanguo: SO_RCVBUF: 
-        //  set or get the maximum socket receive buffer in bytes. The kernel doubles this value (toallow space for 
+        //  set or get the maximum socket receive buffer in bytes. The kernel doubles this value (to allow space for 
         //  bookkeeping overhead) when it is set using setsockopt, and this doubled value is returned by getsockopt. 
         //  The default value is set by the /proc/sys/net/core/rmem_default file; 
         //  And the maximum allowed value is set by the /proc/sys/net/core/rmem_max file; 
@@ -284,7 +284,7 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
 
 #if (NGX_HAVE_REUSEPORT)   //Yuanguo: Linux has this since 3.9
         //Yuanguo:
-        // Linux 3.9 added the option SO_REUSEPORT to Linux as well. This option allows 
+        // Linux 3.9 added the option SO_REUSEPORT to Linux. This option allows 
         // two or more sockets, TCP or UDP, listening (server) or non-listening (client), 
         // to be bound to exactly the same address and port combination as long as all 
         // sockets (including the very first one) had this flag set prior to binding them. 
@@ -317,12 +317,12 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
         // 2. A socket has a send buffer, and it will go to a state called "TIME_WAIT" when it's closed
         //    with send buffer not empty. The socket is not really closed util the buffer is flushed or
         //    a timeout called Linger Time is elpased. During this time period, you cannot bind a new 
-        //    socket to the same address and port unless SO_REUSEADDR is set to the "new socket".
+        //    socket to the same address and port unless SO_REUSEADDR is set on the "new socket".
         //    
         //Yuanguo: important!!!!!!
         // SO_REUSEADDR: you just need to set it on the socket you're binding. That's, you don't need to 
-        //               care about if the sockets that already bound to the same address and port had 
-        //               SO_REUSEADDR set or not.
+        //               care about if the sockets that already bound to the same port had SO_REUSEADDR 
+        //               set or not.
         // SO_REUSEPORT: all sockets bound to the same address and port must have this flag set!
         //
         //Yuanguo: connect behavior in the case of address reuse:
@@ -362,6 +362,24 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
 
         olen = sizeof(int);
 
+        //Yuanguo: how does TCP_FASTOPEN work? 
+        //The 1st time a client connects to a server (three-way-handshake)
+        //      1. client sends a SYN pack; unlike an ordinary SYN pack, it contains a "Fast Open Cookie Request"
+        //      2. when received the SYN pack, the server generates a "Fast Open Cookie" by encrypting client's IPADDR, and then
+        //         sends the SYN/ACK pack to the client; unlike an ordinary SYN/ACK pack, it contains the "Fast Open Cookie";
+        //      3. the client stores the "Fast Open Cookie" and sends ACK pack (and user data); The key point is the "Fast Open 
+        //         Cookie" the client stored, it is used for subsequent connections;
+        //Subsequent connections:
+        //      1. client sends SYN pack; and the SYN pack contains the "Fast Open Cookie" and user data;
+        //      2. server validates the "Fast Open Cookie" 
+        //         a. if passed, server sends back SYN/ACK, the ACK is for both client's SYN pack and user data. And, the user
+        //            data is passed to application; (Note the user data is transfered in the first pack);
+        //         b. if failed, server sends back SYN/ACK, the ACK is only for client's SYN pack; then an ordinary three-way-
+        //            handshake happens;
+        //      3. if passed, server may send application's reply-data (note user data has been transfered to application in step 
+        //            1, so application may give reply by now) before client sends its ACK (which is the last step of three-way-
+        //            handshake)
+        //      4. if failed, client packs the user data in its ACK (which is the last step of three-way-handshake);
         if (getsockopt(ls[i].fd, IPPROTO_TCP, TCP_FASTOPEN,
                        (void *) &ls[i].fastopen, &olen)
             == -1)
@@ -380,6 +398,7 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
 #endif
 
 #if (NGX_HAVE_DEFERRED_ACCEPT && defined SO_ACCEPTFILTER)
+#error "Yuanguo: FreeBSD has SO_ACCEPTFILTER. it's equivalent to TCP_DEFER_ACCEPT of linux"
 
         ngx_memzero(&af, sizeof(struct accept_filter_arg));
         olen = sizeof(struct accept_filter_arg);
@@ -417,6 +436,13 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
         timeout = 0;
         olen = sizeof(int);
 
+        //Yuanguo:
+        //TCP_DEFER_ACCEPT: 
+        // 1. when set on server socket (lisenting socket), server will ignore client's ACK (the last step 
+        //    in three-way-handshake) and will not wake up the application (which is blocking on accept()) 
+        //    until user data is arrived;
+        // 2. when set on client socket (non-listening socket), client will not send a separate ACK (the last 
+        //    step in three-way-handshake), but set the ACK flag in the first user-data pack;
         if (getsockopt(ls[i].fd, IPPROTO_TCP, TCP_DEFER_ACCEPT, &timeout, &olen)
             == -1)
         {

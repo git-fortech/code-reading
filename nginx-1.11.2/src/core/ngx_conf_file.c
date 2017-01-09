@@ -257,6 +257,7 @@ ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
         /* rc == NGX_OK || rc == NGX_CONF_BLOCK_START */
 
         if (cf->handler) {
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s cf->handler not null", __FILE__,__LINE__,__func__);
 
             /*
              * the custom handler, i.e., that is used in the http's
@@ -281,7 +282,10 @@ ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
 
             goto failed;
         }
-
+        else
+        {
+          ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s cf->handler is null", __FILE__,__LINE__,__func__);
+        }
 
         rc = ngx_conf_handler(cf, rc);
 
@@ -324,13 +328,17 @@ done:
 static ngx_int_t
 ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
 {
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Enter", __FILE__,__LINE__,__func__);
+
     char           *rv;
     void           *conf, **confp;
     ngx_uint_t      i, found;
     ngx_str_t      *name;
     ngx_command_t  *cmd;
 
-    name = cf->args->elts;
+    name = cf->args->elts;  //Yuanguo: function ngx_conf_read_token() has put something into cf->args;
+
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s name=%s", __FILE__,__LINE__,__func__,name->data);
 
     found = 0;
 
@@ -369,6 +377,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                   "directive \"%s\" is not terminated by \";\"",
                                   name->data);
+                ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_ERROR;
             }
 
@@ -376,6 +385,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                    "directive \"%s\" has no opening \"{\"",
                                    name->data);
+                ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_ERROR;
             }
 
@@ -429,19 +439,23 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
                 }
             }
 
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s module \"%s\" matched conf param \"%s\", call %s-%s-set() function", __FILE__,__LINE__,__func__, cf->cycle->modules[i]->name, name->data, cf->cycle->modules[i]->name, cmd->name.data);
             rv = cmd->set(cf, cmd, conf);
 
             if (rv == NGX_CONF_OK) {
+                ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_OK;
             }
 
             if (rv == NGX_CONF_ERROR) {
+                ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_ERROR;
             }
 
             ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                "\"%s\" directive %s", name->data, rv);
 
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
             return NGX_ERROR;
         }
     }
@@ -449,13 +463,15 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
     if (found) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "\"%s\" directive is not allowed here", name->data);
-
+ 
+        ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
         return NGX_ERROR;
     }
 
     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                        "unknown directive \"%s\"", name->data);
 
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
     return NGX_ERROR;
 
 invalid:
@@ -463,7 +479,8 @@ invalid:
     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                        "invalid number of arguments in \"%s\" directive",
                        name->data);
-
+ 
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
     return NGX_ERROR;
 }
 
@@ -499,9 +516,9 @@ ngx_conf_read_token(ngx_conf_t *cf)
 
     for ( ;; ) {
 
-        if (b->pos >= b->last) {
+        if (b->pos >= b->last) {   //Yuanguo: buffer is empty now;
 
-            if (cf->conf_file->file.offset >= file_size) {
+            if (cf->conf_file->file.offset >= file_size) {   //Yuanguo: all content in conf file has been read
 
                 if (cf->args->nelts > 0 || !last_space) {
 
@@ -521,6 +538,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 return NGX_CONF_FILE_DONE;
             }
 
+            //Yuanguo: buffer is empty, but we have not finished reading conf file;
             len = b->pos - start;
 
             if (len == NGX_CONF_BUFFER) {
@@ -549,10 +567,10 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 ngx_memmove(b->start, start, len);
             }
 
-            size = (ssize_t) (file_size - cf->conf_file->file.offset);
+            size = (ssize_t) (file_size - cf->conf_file->file.offset); //Yuanguo: size of content in conf file
 
-            if (size > b->end - (b->start + len)) {
-                size = b->end - (b->start + len);
+            if (size > b->end - (b->start + len)) {  //Yuanguo: content in conf file is larger than buffer space;
+                size = b->end - (b->start + len);    //Yuanguo: then we can read at most size of buffer space;
             }
 
             n = ngx_read_file(&cf->conf_file->file, b->start + len, size,

@@ -237,13 +237,17 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         module = cycle->modules[i]->ctx;
 
         if (module->create_conf) {
-            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call create_conf() of module %s", __FILE__,__LINE__,__func__, module->name.data);
+            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call create_conf() of module \"%s\"", __FILE__,__LINE__,__func__, module->name.data);
             rv = module->create_conf(cycle);
             if (rv == NULL) {
                 ngx_destroy_pool(pool);
                 return NULL;
             }
             cycle->conf_ctx[cycle->modules[i]->index] = rv;
+        }
+        else
+        {
+          ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s module \"%s\" does not have create_conf()", __FILE__,__LINE__,__func__, module->name.data);
         }
     }
 
@@ -277,6 +281,11 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     log->log_level = NGX_LOG_DEBUG_ALL;
 #endif
 
+    //Yuanguo: conf_params is a string like lines in conf file; e.g.
+    //   -g "error_log logs/error.log debug; worker_processes 8;" 
+    //note that the conf params set here cannot be duplicated with 
+    //file;
+    //Now, parse it first!
     if (ngx_conf_param(&conf) != NGX_CONF_OK) {
         environ = senv;
         ngx_destroy_cycle_pools(&conf);

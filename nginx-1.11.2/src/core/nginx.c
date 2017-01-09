@@ -773,6 +773,10 @@ ngx_get_options(int argc, char *const *argv)
                     goto next;
                 }
 
+                //Yuanguo: conf_params is a string like lines in conf file; e.g.
+                //   -g "error_log logs/error.log debug; worker_processes 8;" 
+                //note that the conf params set here cannot be duplicated with 
+                //file;
                 if (argv[++i]) {
                     ngx_conf_params = (u_char *) argv[i];
                     goto next;

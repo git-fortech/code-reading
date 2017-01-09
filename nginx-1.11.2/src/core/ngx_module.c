@@ -53,7 +53,7 @@ ngx_cycle_modules(ngx_cycle_t *cycle)
         return NGX_ERROR;
     }
 
-    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s copy ngx_modules to cycle->modules, cycle->modules_n=%u", __FILE__,__LINE__,__func__, cycle->prefix.data, ngx_modules_n);
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s copy ngx_modules to cycle->modules, cycle->modules_n=%d", __FILE__,__LINE__,__func__, ngx_modules_n);
 
     ngx_memcpy(cycle->modules, ngx_modules,
                ngx_modules_n * sizeof(ngx_module_t *));
