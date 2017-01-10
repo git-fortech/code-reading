@@ -887,6 +887,8 @@ ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_conf_t            pcf;
     ngx_event_module_t   *m;
 
+    //Yuanguo: ngx_events_module doesn't have a create_conf function (see ngx_events_module_ctx), 
+    //         so its conf is NULL when "events" is encountered during parsing conf file.
     if (*(void **) conf) {
         return "is duplicate";
     }
@@ -907,6 +909,8 @@ ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     *(void **) conf = ctx;
 
+    //Yuanguo: create conf struct for all module of NGX_EVENT_MODULE type (that is to
+    //         call create_conf() function of those modules);
     for (i = 0; cf->cycle->modules[i]; i++) {
         if (cf->cycle->modules[i]->type != NGX_EVENT_MODULE) {
             continue;
@@ -928,7 +932,9 @@ ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     cf->module_type = NGX_EVENT_MODULE;
     cf->cmd_type = NGX_EVENT_CONF;
 
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s start to parse contents in events{} block", __FILE__,__LINE__,__func__);
     rv = ngx_conf_parse(cf, NULL);
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s finished to parse contents in events{} block", __FILE__,__LINE__,__func__);
 
     *cf = pcf;
 

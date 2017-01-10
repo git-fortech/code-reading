@@ -3335,7 +3335,9 @@ ngx_http_core_types(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     cf->handler = ngx_http_core_type;
     cf->handler_conf = conf;
 
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s start to parse contents in types{} block", __FILE__,__LINE__,__func__);
     rv = ngx_conf_parse(cf, NULL);
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s finished to parse contents in types{} block", __FILE__,__LINE__,__func__);
 
     *cf = save;
 

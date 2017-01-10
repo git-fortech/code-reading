@@ -235,7 +235,11 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     cf->module_type = NGX_HTTP_MODULE;
     cf->cmd_type = NGX_HTTP_MAIN_CONF;
+
+
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s start to parse contents in  http{} block", __FILE__,__LINE__,__func__);
     rv = ngx_conf_parse(cf, NULL);
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s finished to parse contents in  http{} block", __FILE__,__LINE__,__func__);
 
     if (rv != NGX_CONF_OK) {
         goto failed;

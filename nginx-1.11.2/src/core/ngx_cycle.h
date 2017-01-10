@@ -37,6 +37,72 @@ struct ngx_shm_zone_s {
 
 struct ngx_cycle_s {
     void                  ****conf_ctx;
+    //Yuanguo: 
+    //                  indexed by module.index
+    // conf_ctx ---->  +------------------------+
+    //           low  0|     void *             | ---> +-------------------+ 
+    //                 +------------------------+      |      struct       |
+    //                 |                        |      |  ngx_core_conf_t  |
+    //                 +------------------------+      +-------------------+
+    //                 |                        |
+    //                 +------------------------+
+    //                 |                        |
+    //                 +------------------------+
+    //                4|     void ***           | ---> +-------------------+      indexed by module.ctx_index
+    //                 +------------------------+      |      pointer      |  ----->  +----------------+ 
+    //          high   |                        |      +-------------------+          |    void *      | ---->  +------------------+
+    //                 +------------------------+                                     +----------------+        |      struct      |
+    //                 |                        |                                     |                |        | ngx_event_conf_t |
+    //                 +------------------------+                                     +----------------+        +------------------+
+    //                 |                        |                                     |                |
+    //                 +------------------------+                                     +----------------+
+    //                 |                        |                                     ......
+    //                 +------------------------+
+    //                 ......
+    //                 +------------------------+
+    //                 |                        |
+    //                 +------------------------+     struct ngx_http_conf_ctx_t
+    //                7| ngx_http_conf_ctx_t *  | ---> +--------------------+      main conf array indexed by module.ctx_index 
+    //                 +------------------------+      | void  **main_conf  |  ---->  +----------------+
+    //                 |                        |      | void  **srv_conf   |  --+    |                |
+    //                 +------------------------+      | void  **loc_conf   |  -+|    +----------------+
+    //                 |                        |      +--------------------+   ||    |                |
+    //                 +------------------------+                               ||    +----------------+
+    //                 ......                                                   ||    ......
+    //                                                                          ||
+    //                                                                          ||
+    //                                                                          ||
+    //                                                                          || server conf array indexed by module.ctx_index
+    //                                                                          |+->  +----------------+
+    //                                                                          |     |                |
+    //                                                                          |     +----------------+
+    //                                                                          |     |                |
+    //                                                                          |     +----------------+
+    //                                                                          |     ......
+    //                                                                          |
+    //                                                                          |
+    //                                                                          |
+    //                                                                          |  location conf array indexed by module.ctx_index
+    //                                                                          +-->  +----------------+
+    //                                                                                |                |
+    //                                                                                +----------------+
+    //                                                                                |                |
+    //                                                                                +----------------+
+    //                                                                                ......
+    //
+    //Yuanguo:
+    // 0. ngx_core_module: type=NGX_CORE_MODULE and it has create_conf() func. In function ngx_init_cycle(), 
+    //    the create_conf() is called, the created conf is directly stored in array "conf_ctx" and indexed 
+    //    by module.index. Commands of this kind of module has bit NGX_DIRECT_CONF in its type. A similar 
+    //    module is ngx_regex_module; 
+    //
+    // 4. ngx_events_module: type=NGX_CORE_MODULE and it does not have create_conf() func. In function ngx_init_cycle(), 
+    //    no conf struct is created for it. And when "events" is encountered during parsing the conf file, the cmd's set 
+    //    function (ngx_events_block) is called, and this function creates an indrect array for all modules of this family 
+    //    (ngx_event_core_module);
+    //
+    // 7. ngx_http_module 
+
     ngx_pool_t               *pool;
 
     ngx_log_t                *log;

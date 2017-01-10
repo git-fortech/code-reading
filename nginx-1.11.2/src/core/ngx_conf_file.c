@@ -256,6 +256,10 @@ ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
 
         /* rc == NGX_OK || rc == NGX_CONF_BLOCK_START */
 
+        //Yuanguo: when parsing contents in http{types{ .. }}, cf->handler is not null. The "set" function of 
+        //         command "types" (ngx_http_core_module), ngx_http_core_types(), sets cf->handler to function
+        //         ngx_http_core_type();  
+        //         ngx_http_core_type(): store the types in  ngx_http_core_loc_conf_t:types array;
         if (cf->handler) {
             ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s cf->handler not null", __FILE__,__LINE__,__func__);
 
@@ -361,6 +365,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
 
             found = 1;
 
+            //Yuanguo: only cares about module whose type is NGX_CONF_MODULE or cf->module_type;
             if (cf->cycle->modules[i]->type != NGX_CONF_MODULE
                 && cf->cycle->modules[i]->type != cf->module_type)
             {
@@ -425,6 +430,8 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
 
             conf = NULL;
 
+            //Yuanguo: when parsing content of main block, cf->ctx points to
+            //         cycle->conf_ctx, which is an array indexed by module.index;
             if (cmd->type & NGX_DIRECT_CONF) {
                 conf = ((void **) cf->ctx)[cf->cycle->modules[i]->index];
 
@@ -432,6 +439,11 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
                 conf = &(((void **) cf->ctx)[cf->cycle->modules[i]->index]);
 
             } else if (cf->ctx) {
+                //Yuanguo: when parsing contents inside http{ .. }, cf->ctx
+                //         points to a ngx_http_conf_ctx_t struct, the array pointed 
+                //         by main_conf, srv_conf or loc_conf is indexed by module.ctx_index;
+                //         see ngx_http_block(), which created such a struct and let
+                //         cf->ctx point to it; 
                 confp = *(void **) ((char *) cf->ctx + cmd->conf);
 
                 if (confp) {
@@ -488,6 +500,8 @@ invalid:
 static ngx_int_t
 ngx_conf_read_token(ngx_conf_t *cf)
 {
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Enter", __FILE__,__LINE__,__func__);
+
     u_char      *start, ch, *src, *dst;
     off_t        file_size;
     size_t       len;
@@ -526,15 +540,18 @@ ngx_conf_read_token(ngx_conf_t *cf)
                         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                            "unexpected end of parameter, "
                                            "expecting \";\"");
+                        ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                         return NGX_ERROR;
                     }
 
                     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                   "unexpected end of file, "
                                   "expecting \";\" or \"}\"");
+                    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                     return NGX_ERROR;
                 }
 
+                ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_CONF_FILE_DONE;
             }
 
@@ -554,12 +571,14 @@ ngx_conf_read_token(ngx_conf_t *cf)
                     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                        "too long parameter \"%*s...\" started",
                                        10, start);
+                    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                     return NGX_ERROR;
                 }
 
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                    "too long parameter, probably "
                                    "missing terminating \"%c\" character", ch);
+                ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_ERROR;
             }
 
@@ -577,6 +596,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
                               cf->conf_file->file.offset);
 
             if (n == NGX_ERROR) {
+                ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_ERROR;
             }
 
@@ -585,6 +605,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
                                    ngx_read_file_n " returned "
                                    "only %z bytes instead of %z",
                                    n, size);
+                ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_ERROR;
             }
 
@@ -624,10 +645,12 @@ ngx_conf_read_token(ngx_conf_t *cf)
             }
 
             if (ch == ';') {
+                ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_OK;
             }
 
             if (ch == '{') {
+                ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_CONF_BLOCK_START;
             }
 
@@ -638,6 +661,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
             } else {
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                    "unexpected \"%c\"", ch);
+                ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_ERROR;
             }
         }
@@ -657,22 +681,27 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 if (cf->args->nelts == 0) {
                     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                        "unexpected \"%c\"", ch);
+                    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                     return NGX_ERROR;
                 }
 
                 if (ch == '{') {
+                    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                     return NGX_CONF_BLOCK_START;
                 }
 
+                ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_OK;
 
             case '}':
                 if (cf->args->nelts != 0) {
                     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                        "unexpected \"}\"");
+                    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                     return NGX_ERROR;
                 }
 
+                ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_CONF_BLOCK_DONE;
 
             case '#':
@@ -741,11 +770,13 @@ ngx_conf_read_token(ngx_conf_t *cf)
             if (found) {
                 word = ngx_array_push(cf->args);
                 if (word == NULL) {
+                    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                     return NGX_ERROR;
                 }
 
                 word->data = ngx_pnalloc(cf->pool, b->pos - 1 - start + 1);
                 if (word->data == NULL) {
+                    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                     return NGX_ERROR;
                 }
 
@@ -786,10 +817,12 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s got word:%s", __FILE__,__LINE__,__func__, word->data);
 
                 if (ch == ';') {
+                    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                     return NGX_OK;
                 }
 
                 if (ch == '{') {
+                    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                     return NGX_CONF_BLOCK_START;
                 }
 
@@ -821,7 +854,10 @@ ngx_conf_include(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         ngx_log_debug1(NGX_LOG_DEBUG_CORE, cf->log, 0, "include %s", file.data);
 
-        return ngx_conf_parse(cf, &file);
+        ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s start to parse included file %s", __FILE__,__LINE__,__func__, file.data);
+        char * ret_yuanguo_added = ngx_conf_parse(cf, &file);
+        ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s finished to parse included file %s", __FILE__,__LINE__,__func__, file.data);
+        return ret_yuanguo_added;
     }
 
     ngx_memzero(&gl, sizeof(ngx_glob_t));
@@ -853,7 +889,9 @@ ngx_conf_include(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         ngx_log_debug1(NGX_LOG_DEBUG_CORE, cf->log, 0, "include %s", file.data);
 
+        ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s start to parse included file %s", __FILE__,__LINE__,__func__, file.data);
         rv = ngx_conf_parse(cf, &file);
+        ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s finished to parse included file %s", __FILE__,__LINE__,__func__, file.data);
 
         if (rv != NGX_CONF_OK) {
             break;
