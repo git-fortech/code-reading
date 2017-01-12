@@ -444,6 +444,10 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
                 //         by main_conf, srv_conf or loc_conf are indexed by module.ctx_index;
                 //         see ngx_http_block(), which created such a struct and let
                 //         cf->ctx point to it; 
+                //         when parsing contents inside events{ .. }, cf->ctx
+                //         points to the array of conf structs of event modules. see 
+                //         ngx_events_block(), which created the array and let cf->ctx
+                //         point to it;
                 confp = *(void **) ((char *) cf->ctx + cmd->conf);
 
                 if (confp) {
@@ -451,7 +455,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
                 }
             }
 
-            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s module \"%s\" matched conf param \"%s\", call %s-%s-set() function", __FILE__,__LINE__,__func__, cf->cycle->modules[i]->name, name->data, cf->cycle->modules[i]->name, cmd->name.data);
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s module \"%s\" matched conf param \"%s\", call %s::%s::set() function", __FILE__,__LINE__,__func__, cf->cycle->modules[i]->name, name->data, cf->cycle->modules[i]->name, cmd->name.data);
             rv = cmd->set(cf, cmd, conf);
 
             if (rv == NGX_CONF_OK) {

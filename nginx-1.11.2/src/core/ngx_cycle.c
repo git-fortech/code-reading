@@ -281,10 +281,9 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     log->log_level = NGX_LOG_DEBUG_ALL;
 #endif
 
-    //Yuanguo: conf_params is a string like lines in conf file; e.g.
+    //Yuanguo: conf_params is a string, similar to lines in conf file; e.g.
     //   -g "error_log logs/error.log debug; worker_processes 8;" 
-    //note that the conf params set here cannot be duplicated with 
-    //file;
+    //Note that the conf params set here cannot be duplicated with params in conf file;
     //Now, parse it first!
     if (ngx_conf_param(&conf) != NGX_CONF_OK) {
         environ = senv;

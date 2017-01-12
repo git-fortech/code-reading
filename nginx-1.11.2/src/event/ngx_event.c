@@ -889,6 +889,7 @@ ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     //Yuanguo: ngx_events_module doesn't have a create_conf function (see ngx_events_module_ctx), 
     //         so its conf is NULL when "events" is encountered during parsing conf file.
+    //         If its conf is not NULL, there should be duplication.
     if (*(void **) conf) {
         return "is duplicate";
     }
