@@ -259,7 +259,7 @@ ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
         //Yuanguo: when parsing contents in http{types{ .. }}, cf->handler is not null. The "set" function of 
         //         command "types" (ngx_http_core_module), ngx_http_core_types(), sets cf->handler to function
         //         ngx_http_core_type();  
-        //         ngx_http_core_type(): store the types in  ngx_http_core_loc_conf_t:types array;
+        //         ngx_http_core_type(): store the types in "ngx_http_core_loc_conf_t:types" array;
         if (cf->handler) {
             ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s cf->handler not null", __FILE__,__LINE__,__func__);
 
@@ -430,7 +430,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
 
             conf = NULL;
 
-            //Yuanguo: when parsing content of main block, cf->ctx points to
+            //Yuanguo: when parsing content of main block, cf->ctx was set to
             //         cycle->conf_ctx, which is an array indexed by module.index;
             if (cmd->type & NGX_DIRECT_CONF) {
                 conf = ((void **) cf->ctx)[cf->cycle->modules[i]->index];
@@ -440,8 +440,8 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
 
             } else if (cf->ctx) {
                 //Yuanguo: when parsing contents inside http{ .. }, cf->ctx
-                //         points to a ngx_http_conf_ctx_t struct, the array pointed 
-                //         by main_conf, srv_conf or loc_conf is indexed by module.ctx_index;
+                //         points to a ngx_http_conf_ctx_t struct, the arrays pointed 
+                //         by main_conf, srv_conf or loc_conf are indexed by module.ctx_index;
                 //         see ngx_http_block(), which created such a struct and let
                 //         cf->ctx point to it; 
                 confp = *(void **) ((char *) cf->ctx + cmd->conf);
