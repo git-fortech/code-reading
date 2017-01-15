@@ -2969,6 +2969,69 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     ngx_http_core_srv_conf_t    *cscf, **cscfp;
     ngx_http_core_main_conf_t   *cmcf;
 
+
+    //Yuanguo: 
+    //                 indexed by module.index
+    //conf_ctx ---->  +------------------------+
+    //                |                        |
+    //                +------------------------+
+    //                ......                   
+    //                +------------------------+  struct ngx_http_conf_ctx_t
+    //               7| ngx_http_conf_ctx_t *  |--> +------------------+      main conf array indexed by module.ctx_index 
+    //                +------------------------+    | void  **main_conf|  ---+-> +----------------+
+    //                |                        |    | void  **srv_conf |  --+|   |                | ---->  +-------------------------+ 
+    //                +------------------------+    | void  **loc_conf |  -+||   +----------------+        |         struct          |
+    //                |                        |    +------------------+   |||   |                | -+     |ngx_http_core_main_conf_t|
+    //                +------------------------+                           |||   +----------------+  |     +-------------------------+
+    //                ......                                               |||   ......              |     |  servers                |
+    //                                                                     |||                       |     |  ......                 |
+    //                                                                     |||                       |     +-------------------------+
+    //                                                                     |||                       |
+    //                                                                     |||                       |
+    //                                                                     |||                       +-->  +-------------------------+
+    //                                                                     |||                             |         struct          |
+    //                                                                     |||                             | ngx_http_xx_main_conf_t |
+    //                                                                     |||                             +-------------------------+ 
+    //                                                       +-------------+++
+    //                                                       |  ^          ||
+    //                                                       |  |          || server conf array indexed by module.ctx_index
+    //                                                       |  |          |+->  +----------------+
+    //ctx --> +--------------------+                         |  |          |     |                | ---->  +-------------------------+
+    //        | void  **main_conf  | ------------------------+  |          |     +----------------+        |         struct          |
+    //        | void  **srv_conf   | -----> +--------------+    |          |     |                |        |  ngx_http_xx_srv_conf_t |
+    //        | void  **loc_conf   | --+    |              |    |          |     +----------------+        +-------------------------+
+    //        +--------------------+   |    +--------------+    |          |     ......
+    //                                 |    |              |    |          |
+    //                                 |    +--------------+    |          |
+    //                                 |    ....                |          |
+    //                                 |                        |          |  location conf array indexed by module.ctx_index
+    //                                 +--> +--------------+    |          +-->  +----------------+
+    //                                      |              |    |                |                | ---->  +-------------------------+
+    //                                      +--------------+    |                +----------------+        |         struct          |
+    //                                      |              |    |                |                |        |  ngx_http_xx_loc_conf_t |
+    //                                      +--------------+    |                +----------------+        +-------------------------+
+    //                                      ......              |                ......
+    //                                                          |
+    //                                                          |
+    //                                                          |
+    //for another servr{} block                                 |
+    //                                                          |
+    //ctx --> +--------------------+                            |
+    //        | void  **main_conf  | ---------------------------+
+    //        | void  **srv_conf   | -----> +--------------+
+    //        | void  **loc_conf   | --+    |              |
+    //        +--------------------+   |    +--------------+
+    //                                 |    |              |
+    //                                 |    +--------------+
+    //                                 |    ....            
+    //                                 |                    
+    //                                 +--> +--------------+
+    //                                      |              |
+    //                                      +--------------+
+    //                                      |              |
+    //                                      +--------------+
+    //                                      ....            
+
     ctx = ngx_pcalloc(cf->pool, sizeof(ngx_http_conf_ctx_t));
     if (ctx == NULL) {
         return NGX_CONF_ERROR;
@@ -3040,7 +3103,9 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     cf->ctx = ctx;
     cf->cmd_type = NGX_HTTP_SRV_CONF;
 
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s start to parse contents in server{} block", __FILE__,__LINE__,__func__);
     rv = ngx_conf_parse(cf, NULL);
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s finished to parse contents in server{} block", __FILE__,__LINE__,__func__);
 
     *cf = pcf;
 
@@ -3331,15 +3396,15 @@ ngx_http_core_types(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         }
     }
 
-    save = *cf;
-    cf->handler = ngx_http_core_type;
+    save = *cf;  //Yuanguo: back up the original conf, whose handler callback func is NULL;
+    cf->handler = ngx_http_core_type;  //Yuangu: handler callback is set now, so when parsing contents in http{types{...}} handler is not NULL;
     cf->handler_conf = conf;
 
     ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s start to parse contents in types{} block", __FILE__,__LINE__,__func__);
     rv = ngx_conf_parse(cf, NULL);
     ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s finished to parse contents in types{} block", __FILE__,__LINE__,__func__);
 
-    *cf = save;
+    *cf = save;  //Yuanguo: restore the original conf, whose handler callback func is NULL;
 
     return rv;
 }
@@ -3372,15 +3437,42 @@ ngx_http_core_type(ngx_conf_t *cf, ngx_command_t *dummy, void *conf)
         return NGX_CONF_ERROR;
     }
 
-    *content_type = value[0];
+    *content_type = value[0];     //Yuanguo: first column, it is the value;
 
-    for (i = 1; i < cf->args->nelts; i++) {
+    //Yuanguo:
+    //see /usr/local/nginx-1.11.2/conf/mime.types
+    //first column is the value; subsequent columns are the keys mapped to this value;
+    //
+    // clcf->types  ---->    +------------------------+
+    //                       | key = html             | 0
+    //                       | value = text/html      |
+    //                       | key_hash = xx          |
+    //                       +------------------------+
+    //                       | key = htm              | 1
+    //                       | value = text/html      |
+    //                       | key_hash = xx          |
+    //                       +------------------------+
+    //                       | key = shtml            | 2
+    //                       | value = text/html      |
+    //                       | key_hash = xx          |
+    //                       +------------------------+
+    //                       | key = css              | 3
+    //                       | value = text/css       |
+    //                       | key_hash = xx          |
+    //                       +------------------------+
+    //                       | key = xml              | 4
+    //                       | value = text/xml       |
+    //                       | key_hash = xx          |
+    //                       +------------------------+
+    //                       ......
+
+    for (i = 1; i < cf->args->nelts; i++) {  //Yuanguo: subsequent columns, that are the keys;
 
         hash = ngx_hash_strlow(value[i].data, value[i].data, value[i].len);
 
         type = clcf->types->elts;
         for (n = 0; n < clcf->types->nelts; n++) {
-            if (ngx_strcmp(value[i].data, type[n].key.data) == 0) {
+            if (ngx_strcmp(value[i].data, type[n].key.data) == 0) {//Yuanguo: the key appeared befoe, so it's duplicated;
                 old = type[n].value;
                 type[n].value = content_type;
 

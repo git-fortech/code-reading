@@ -353,6 +353,32 @@ struct ngx_http_core_loc_conf_s {
     ngx_array_t  *root_lengths;
     ngx_array_t  *root_values;
 
+    //Yuanguo:
+    //see /usr/local/nginx-1.11.2/conf/mime.types
+    //first column is the value; subsequent columns are the keys mapped to this value;
+    //
+    //    types  ---->       +------------------------+
+    //                       | key = html             | 0
+    //                       | value = text/html      |
+    //                       | key_hash = xx          |
+    //                       +------------------------+
+    //                       | key = htm              | 1
+    //                       | value = text/html      |
+    //                       | key_hash = xx          |
+    //                       +------------------------+
+    //                       | key = shtml            | 2
+    //                       | value = text/html      |
+    //                       | key_hash = xx          |
+    //                       +------------------------+
+    //                       | key = css              | 3
+    //                       | value = text/css       |
+    //                       | key_hash = xx          |
+    //                       +------------------------+
+    //                       | key = xml              | 4
+    //                       | value = text/xml       |
+    //                       | key_hash = xx          |
+    //                       +------------------------+
+    //                       ......
     ngx_array_t  *types;
     ngx_hash_t    types_hash;
     ngx_str_t     default_type;
