@@ -4114,6 +4114,7 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     lsopt.rcvbuf = -1;
     lsopt.sndbuf = -1;
 #if (NGX_HAVE_SETFIB)
+#error "Yuanguo: we don't have it"
     lsopt.setfib = -1;
 #endif
 #if (NGX_HAVE_TCP_FASTOPEN)
