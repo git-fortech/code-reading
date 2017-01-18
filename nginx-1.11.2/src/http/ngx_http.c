@@ -1177,11 +1177,13 @@ ngx_http_add_listen(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
 
         /* a port is already in the port list */
 
+        ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s port %d already exists", __FILE__,__LINE__,__func__, p);
         return ngx_http_add_addresses(cf, cscf, &port[i], lsopt);
     }
 
     /* add a port to the port list */
 
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Add port %d", __FILE__,__LINE__,__func__, p);
     port = ngx_array_push(cmcf->ports);
     if (port == NULL) {
         return NGX_ERROR;
@@ -1226,6 +1228,7 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
         }
 
         /* the address is already in the address list */
+        ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s addr %s for port %d already exists", __FILE__,__LINE__,__func__, lsopt->addr, port->port);
 
         if (ngx_http_add_server(cf, cscf, &addr[i]) != NGX_OK) {
             return NGX_ERROR;
@@ -1319,6 +1322,8 @@ ngx_http_add_address(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
 
 #endif
 
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Add addr %s for port %d", __FILE__,__LINE__,__func__, lsopt->addr, port->port);
+
     addr = ngx_array_push(&port->addrs);
     if (addr == NULL) {
         return NGX_ERROR;
@@ -1348,6 +1353,8 @@ ngx_http_add_server(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
 {
     ngx_uint_t                  i;
     ngx_http_core_srv_conf_t  **server;
+
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Add server for port %d and addr %s", __FILE__,__LINE__,__func__, ngx_inet_get_port(&addr->opt.sockaddr.sockaddr), addr->opt.addr);
 
     if (addr->servers.elts == NULL) {
         if (ngx_array_init(&addr->servers, cf->temp_pool, 4,

@@ -4316,6 +4316,7 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         if (ngx_strcmp(value[n].data, "http2") == 0) {
 #if (NGX_HTTP_V2)
+#error "Yuanguo, we don't have this"
             lsopt.http2 = 1;
             continue;
 #else
@@ -4344,7 +4345,7 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
             } else {
 
-#if (NGX_HAVE_KEEPALIVE_TUNABLE)
+#if (NGX_HAVE_KEEPALIVE_TUNABLE)  // Yuanguo: we have this!
                 u_char     *p, *end;
                 ngx_str_t   s;
 

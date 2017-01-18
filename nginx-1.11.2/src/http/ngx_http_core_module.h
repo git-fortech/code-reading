@@ -170,6 +170,37 @@ typedef struct {
 
     ngx_hash_keys_arrays_t    *variables_keys;
 
+    //Yuanguo:  ////////////////////////////////////////////////////////////////////////////////////////////////////////                                        
+    //                                                                         ......
+    //                                                                         +=======================================+
+    //                                                                         | ngx_http_core_srv_conf_t*  of server3 |
+    //                                                                         +=======================================+
+    //                                                                         | ngx_http_core_srv_conf_t*  of server2 |
+    //                                                                    +->  +=======================================+
+    //                                                                    |      Array of servers that are listening
+    //                                                                    |      on ipaddr2:80
+    //                                        ......                      |
+    //      ......                            +=========================+ |
+    //      +=========================+       |   servers    -----------+-+    ......
+    //      |     addrs               |       |   default_server        |      +=======================================+
+    //      |     port = 9090         |       |   ......                |      | ngx_http_core_srv_conf_t*  of server5 |
+    //      |     family = AF_INET    |       |   opt.sockaddr=ipaddr2  |      +=======================================+
+    //      |  ---------------------  |       | ----------------------- |      | ngx_http_core_srv_conf_t*  of server4 |
+    //      | ngx_http_conf_port_t    |       |  ngx_http_conf_addr_t   |      +=======================================+
+    //    2 +=========================+       +=========================+      | ngx_http_core_srv_conf_t*  of server1 |
+    //      |     addrs               |       |   servers    -----------+--->  +=======================================+
+    //      |     port = 8080         |       |   default_server        |         Array of servers that are listening
+    //      |     family = AF_INET    |       |   ......                |         on ipaddr1:80 !!!
+    //      |  ---------------------  |       |   opt.sockaddr=ipaddr1  |         
+    //      | ngx_http_conf_port_t    |       | ----------------------- |         Note!!!  multiple servers may listen 
+    //    1 +=========================+       |  ngx_http_conf_addr_t   |                  on the same ipaddr:port. Try 
+    //      |     addrs       --------+---->  +=========================+                  it by configuring 2 servers 
+    //      |     port = 80           |         Array of servers that                      listening on the same ipaddr
+    //      |     family = AF_INET    |         are listening on port                      :port!
+    //      |  ---------------------  |         80 (ipaddr may be different)!
+    //      | ngx_http_conf_port_t    |
+    //    0 +=========================+
+
     ngx_array_t               *ports;
 
     ngx_uint_t                 try_files;       /* unsigned  try_files:1 */

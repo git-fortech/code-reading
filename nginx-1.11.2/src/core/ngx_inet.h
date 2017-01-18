@@ -97,7 +97,7 @@ typedef struct {
     socklen_t                 socklen;
     ngx_sockaddr_t            sockaddr;
 
-    ngx_addr_t               *addrs;
+    ngx_addr_t               *addrs;  //Yuanguo: one hostname may be resolved into multiple addresses;
     ngx_uint_t                naddrs;
 
     char                     *err;
