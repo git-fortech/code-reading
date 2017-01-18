@@ -3150,6 +3150,85 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
 static char *
 ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
 {
+
+    //Yuanguo: 
+    //                 indexed by module.index
+    //conf_ctx ---->  +------------------------+
+    //                |                        |
+    //                +------------------------+
+    //                ......                   
+    //                +------------------------+  struct ngx_http_conf_ctx_t
+    //               7| ngx_http_conf_ctx_t *  |--> +------------------+      main conf array indexed by module.ctx_index 
+    //                +------------------------+    | void  **main_conf|  ---+-> +----------------+
+    //                |                        |    | void  **srv_conf |  --+^   |                | ---->  +-------------------------+ 
+    //                +------------------------+    | void  **loc_conf |  -+||   +----------------+        |         struct          |
+    //                |                        |    +------------------+   |||   |                | -+     |ngx_http_core_main_conf_t|
+    //                +------------------------+                           |||   +----------------+  |     +-------------------------+
+    //                ......                                               |||   ......              |     |  servers                |
+    //                                                                     |||                       |     |  ......                 |
+    //                                                                     |||                       |     +-------------------------+
+    //                                                                     |||                       |
+    //                                                                     |||                       |
+    //                                                                     |||                       +-->  +-------------------------+
+    //                                                                     |||                             |         struct          |
+    //                                                                     |||                             | ngx_http_xx_main_conf_t |
+    //                                                                     |||                             +-------------------------+ 
+    //                                                       +-------------+++
+    //                                                       |  ^          ||
+    // for one servr{} block                                 |  |          || server conf array indexed by module.ctx_index
+    //                                                       |  |          |+->  +----------------+
+    //        +--------------------+                         |  |          |     |                | ---->  +-------------------------+
+    //        | void  **main_conf  | ------------------------+  |          |     +----------------+        |         struct          |
+    //        | void  **srv_conf   | -----> +--------------+    |          |     |                |        |  ngx_http_xx_srv_conf_t |
+    //        | void  **loc_conf   | --+    |              |    |          |     +----------------+        +-------------------------+
+    //        +--------------------+   |    +--------------+    |          |     ......
+    //                                 |    |              |    |          |
+    //                                 |    +--------------+    |          |
+    //                                 |    ....                |          |
+    //                                 |                        |          |  location conf array indexed by module.ctx_index
+    //                                 +--> +--------------+    |          +-->  +----------------+
+    //                                      |              |    |                |                | ---->  +-------------------------+
+    //                                      +--------------+    |                +----------------+        |         struct          |
+    //                                      |              |    |                |                |        |  ngx_http_xx_loc_conf_t |
+    //                                      +--------------+    |                +----------------+        +-------------------------+
+    //                                      ......              |                ......
+    //                                                          |
+    //                                                          |
+    //                                                          |
+    //for another servr{} block                                 |
+    //                                                          |
+    //        +--------------------+                            |
+    //        | void  **main_conf  | -------------------------> + <-----+
+    //        | void  **srv_conf   | -----> +--------------+ <------+   |
+    //        | void  **loc_conf   | --+    |              |        |   |
+    //        +--------------------+   |    +--------------+        |   |
+    //                                 |    |              |        |   |
+    //                                 |    +--------------+        |   |
+    //                                 |    ....                    |   |
+    //                                 |                            |   |
+    //                                 +--> +--------------+        |   |
+    //                                      |              |        |   |
+    //                                      +--------------+        |   |
+    //                                      |              |        |   |
+    //                                      +--------------+        |   |
+    //                                      ....                    |   |
+    //                                                              |   |
+    //                                                              |   |
+    //                                                              |   |
+    //                                                              |   |                 for a location block
+    //                                                              |   |   +--------------------+  <--- ctx
+    //                                                              |   +-- | void  **main_conf  | 
+    //                                                              +------ | void  **srv_conf   |                 
+    //                                                           +--------- | void  **loc_conf   |                   
+    //                                                           |          +--------------------+                       
+    //                                                           |                                                  
+    //                                      +--------------+ <---+
+    //                                      |              |
+    //                                      +--------------+
+    //                                      |              |
+    //                                      +--------------+
+    //                                      ....            
+
     char                      *rv;
     u_char                    *mod;
     size_t                     len;
@@ -3201,23 +3280,23 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
         mod = value[1].data;
         name = &value[2];
 
-        if (len == 1 && mod[0] == '=') {
+        if (len == 1 && mod[0] == '=') {                          //Yuanguo: location  = name { ... }   exact match
 
             clcf->name = *name;
             clcf->exact_match = 1;
 
-        } else if (len == 2 && mod[0] == '^' && mod[1] == '~') {
+        } else if (len == 2 && mod[0] == '^' && mod[1] == '~') {  //Yuanguo: location ^~ name { ... }   no regex
 
             clcf->name = *name;
             clcf->noregex = 1;
 
-        } else if (len == 1 && mod[0] == '~') {
+        } else if (len == 1 && mod[0] == '~') {                   //Yuanguo: location  ~ name { ... }   regex
 
             if (ngx_http_core_regex_location(cf, clcf, name, 0) != NGX_OK) {
                 return NGX_CONF_ERROR;
             }
 
-        } else if (len == 2 && mod[0] == '~' && mod[1] == '*') {
+        } else if (len == 2 && mod[0] == '~' && mod[1] == '*') {  //Yuanguo: location ~* name { ... }   regex and caseless
 
             if (ngx_http_core_regex_location(cf, clcf, name, 1) != NGX_OK) {
                 return NGX_CONF_ERROR;
@@ -3233,13 +3312,13 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
 
         name = &value[1];
 
-        if (name->data[0] == '=') {
+        if (name->data[0] == '=') {                                 //Yuanguo: location  =name { ... }
 
             clcf->name.len = name->len - 1;
             clcf->name.data = name->data + 1;
             clcf->exact_match = 1;
 
-        } else if (name->data[0] == '^' && name->data[1] == '~') {
+        } else if (name->data[0] == '^' && name->data[1] == '~') {  //Yuanguo: location ^~name { ... }
 
             clcf->name.len = name->len - 2;
             clcf->name.data = name->data + 2;
@@ -3250,7 +3329,7 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
             name->len--;
             name->data++;
 
-            if (name->data[0] == '*') {
+            if (name->data[0] == '*') {                             //Yuanguo: location ~*name { ... }
 
                 name->len--;
                 name->data++;
@@ -3259,7 +3338,7 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
                     return NGX_CONF_ERROR;
                 }
 
-            } else {
+            } else {                                                //Yuanguo: location  ~name { ... }
                 if (ngx_http_core_regex_location(cf, clcf, name, 0) != NGX_OK) {
                     return NGX_CONF_ERROR;
                 }
@@ -3280,6 +3359,15 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     if (cf->cmd_type == NGX_HTTP_LOC_CONF) {
 
         /* nested location */
+      
+        //Yuanguo:
+        //        location / {
+        //            location = /name {
+        //                root   html;
+        //            }
+        //            root   html;
+        //            index  index.html index.htm;
+        //        }
 
 #if 0
         clcf->prev_location = pclcf;
@@ -3333,7 +3421,9 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     cf->ctx = ctx;
     cf->cmd_type = NGX_HTTP_LOC_CONF;
 
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s start to parse contents in location %s {} block", __FILE__,__LINE__,__func__, clcf->name.data);
     rv = ngx_conf_parse(cf, NULL);
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s finished to parse contents in location %s {} block", __FILE__,__LINE__,__func__, clcf->name.data);
 
     *cf = save;
 
