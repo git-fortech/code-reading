@@ -228,7 +228,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     }
 
 
-    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call create_conf() of core modules", __FILE__,__LINE__,__func__);
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call create_conf() of CORE modules", __FILE__,__LINE__,__func__);
     for (i = 0; cycle->modules[i]; i++) {
         if (cycle->modules[i]->type != NGX_CORE_MODULE) {
             continue;
@@ -247,7 +247,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         }
         else
         {
-          ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s module \"%s\" does not have create_conf()", __FILE__,__LINE__,__func__, module->name.data);
+          ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s module \"%s\" has no create_conf()", __FILE__,__LINE__,__func__, module->name.data);
         }
     }
 
@@ -304,7 +304,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
                        cycle->conf_file.data);
     }
 
-    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call init_conf() of core modules", __FILE__,__LINE__,__func__);
+    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call init_conf() of CORE modules", __FILE__,__LINE__,__func__);
     for (i = 0; cycle->modules[i]; i++) {
         if (cycle->modules[i]->type != NGX_CORE_MODULE) {
             continue;
@@ -314,7 +314,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
         if (module->init_conf) {
 
-            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call init_conf() of module %s", __FILE__,__LINE__,__func__, module->name.data);
+            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call init_conf() of module \"%s\"", __FILE__,__LINE__,__func__, module->name.data);
             if (module->init_conf(cycle,
                                   cycle->conf_ctx[cycle->modules[i]->index])
                 == NGX_CONF_ERROR)

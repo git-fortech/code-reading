@@ -2958,18 +2958,6 @@ ngx_http_get_forwarded_addr_internal(ngx_http_request_t *r, ngx_addr_t *addr,
 static char *
 ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
 {
-    char                        *rv;
-    void                        *mconf;
-    ngx_uint_t                   i;
-    ngx_conf_t                   pcf;
-    ngx_http_module_t           *module;
-    struct sockaddr_in          *sin;
-    ngx_http_conf_ctx_t         *ctx, *http_ctx;
-    ngx_http_listen_opt_t        lsopt;
-    ngx_http_core_srv_conf_t    *cscf, **cscfp;
-    ngx_http_core_main_conf_t   *cmcf;
-
-
     //Yuanguo: 
     //                 indexed by module.index
     //conf_ctx ---->  +------------------------+
@@ -3031,6 +3019,18 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     //                                      |              |
     //                                      +--------------+
     //                                      ....            
+
+    char                        *rv;
+    void                        *mconf;
+    ngx_uint_t                   i;
+    ngx_conf_t                   pcf;
+    ngx_http_module_t           *module;
+    struct sockaddr_in          *sin;
+    ngx_http_conf_ctx_t         *ctx, *http_ctx;
+    ngx_http_listen_opt_t        lsopt;
+    ngx_http_core_srv_conf_t    *cscf, **cscfp;
+    ngx_http_core_main_conf_t   *cmcf;
+
 
     ctx = ngx_pcalloc(cf->pool, sizeof(ngx_http_conf_ctx_t));
     if (ctx == NULL) {

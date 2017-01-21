@@ -73,7 +73,7 @@ ngx_init_modules(ngx_cycle_t *cycle)
 
     for (i = 0; cycle->modules[i]; i++) {
         if (cycle->modules[i]->init_module) {
-            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call init_module() of module %s", __FILE__,__LINE__,__func__, cycle->modules[i]->name);
+            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s call init_module() of module \"%s\"", __FILE__,__LINE__,__func__, cycle->modules[i]->name);
             if (cycle->modules[i]->init_module(cycle) != NGX_OK) {
                 ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
                 return NGX_ERROR;
@@ -81,7 +81,7 @@ ngx_init_modules(ngx_cycle_t *cycle)
         }
         else
         {
-            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s module %s does not have init_module() function", __FILE__,__LINE__,__func__, cycle->modules[i]->name);
+            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "YuanguoDbg %s:%d %s module \"%s\" has no init_module() function", __FILE__,__LINE__,__func__, cycle->modules[i]->name);
         }
     }
 

@@ -184,6 +184,7 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
      * of the all http modules
      */
 
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s call create_main_conf(), create_srv_conf() and create_loc_conf() of HTTP modules", __FILE__,__LINE__,__func__);
     for (m = 0; cf->cycle->modules[m]; m++) {
         if (cf->cycle->modules[m]->type != NGX_HTTP_MODULE) {
             continue;
@@ -193,30 +194,43 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         mi = cf->cycle->modules[m]->ctx_index;
 
         if (module->create_main_conf) {
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s call create_main_conf() of module \"%s\"", __FILE__,__LINE__,__func__, cf->cycle->modules[m]->name);
             ctx->main_conf[mi] = module->create_main_conf(cf);
             if (ctx->main_conf[mi] == NULL) {
                 return NGX_CONF_ERROR;
             }
         }
+        else {
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s module \"%s\" has no create_main_conf() function", __FILE__,__LINE__,__func__, cf->cycle->modules[m]->name);
+        }
 
         if (module->create_srv_conf) {
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s call create_srv_conf() of module \"%s\"", __FILE__,__LINE__,__func__, cf->cycle->modules[m]->name);
             ctx->srv_conf[mi] = module->create_srv_conf(cf);
             if (ctx->srv_conf[mi] == NULL) {
                 return NGX_CONF_ERROR;
             }
         }
+        else {
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s module \"%s\" has no create_srv_conf() function", __FILE__,__LINE__,__func__, cf->cycle->modules[m]->name);
+        }
 
         if (module->create_loc_conf) {
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s call create_loc_conf() of module \"%s\"", __FILE__,__LINE__,__func__, cf->cycle->modules[m]->name);
             ctx->loc_conf[mi] = module->create_loc_conf(cf);
             if (ctx->loc_conf[mi] == NULL) {
                 return NGX_CONF_ERROR;
             }
+        }
+        else {
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s module \"%s\" has no create_loc_conf() function", __FILE__,__LINE__,__func__, cf->cycle->modules[m]->name);
         }
     }
 
     pcf = *cf;
     cf->ctx = ctx;
 
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s call preconfiguration() of HTTP modules", __FILE__,__LINE__,__func__);
     for (m = 0; cf->cycle->modules[m]; m++) {
         if (cf->cycle->modules[m]->type != NGX_HTTP_MODULE) {
             continue;
@@ -225,9 +239,13 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         module = cf->cycle->modules[m]->ctx;
 
         if (module->preconfiguration) {
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s call preconfiguration() of module \"%s\"", __FILE__,__LINE__,__func__, cf->cycle->modules[m]->name);
             if (module->preconfiguration(cf) != NGX_OK) {
                 return NGX_CONF_ERROR;
             }
+        }
+        else {
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s module \"%s\" has no preconfiguration() function", __FILE__,__LINE__,__func__, cf->cycle->modules[m]->name);
         }
     }
 
@@ -253,6 +271,7 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     cmcf = ctx->main_conf[ngx_http_core_module.ctx_index];
     cscfp = cmcf->servers.elts;
 
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s call init_main_conf() of HTTP modules", __FILE__,__LINE__,__func__);
     for (m = 0; cf->cycle->modules[m]; m++) {
         if (cf->cycle->modules[m]->type != NGX_HTTP_MODULE) {
             continue;
@@ -264,11 +283,16 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         /* init http{} main_conf's */
 
         if (module->init_main_conf) {
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s call init_main_conf() of module \"%s\"", __FILE__,__LINE__,__func__, cf->cycle->modules[m]->name);
             rv = module->init_main_conf(cf, ctx->main_conf[mi]);
             if (rv != NGX_CONF_OK) {
                 goto failed;
             }
         }
+        else {
+            ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s module \"%s\" has no init_main_conf() function", __FILE__,__LINE__,__func__, cf->cycle->modules[m]->name);
+        }
+
 
         rv = ngx_http_merge_servers(cf, cmcf, module, mi);
         if (rv != NGX_CONF_OK) {
