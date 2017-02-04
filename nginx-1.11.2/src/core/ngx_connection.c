@@ -228,8 +228,8 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
         //Yuanguo: SO_RCVBUF: 
         //  set or get the maximum socket receive buffer in bytes. The kernel doubles this value (to allow space for 
         //  bookkeeping overhead) when it is set using setsockopt, and this doubled value is returned by getsockopt. 
-        //  The default value is set by the /proc/sys/net/core/rmem_default file; 
-        //  And the maximum allowed value is set by the /proc/sys/net/core/rmem_max file; 
+        //  The default value is set by /proc/sys/net/core/rmem_default;
+        //  And the maximum allowed value is set by /proc/sys/net/core/rmem_max;
         //  The minimum (doubled) value for this option is 256;
         if (getsockopt(ls[i].fd, SOL_SOCKET, SO_RCVBUF, (void *) &ls[i].rcvbuf,
                        &olen)
@@ -286,8 +286,8 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
         //Yuanguo:
         // Linux 3.9 added the option SO_REUSEPORT to Linux. This option allows 
         // two or more sockets, TCP or UDP, listening (server) or non-listening (client), 
-        // to be bound to exactly the same address and port combination as long as all 
-        // sockets (including the very first one) had this flag set prior to binding them. 
+        // to be bound to exactly the same address and port combination as long as all of
+        // them (including the very first one) had this flag set prior to binding.
         // To prevent "port hijacking", there is one special limitation, though: All sockets 
         // that want to share the same address and port combination must belong to processes 
         // that share the same effective user ID! So one user cannot "steal" ports of another 
@@ -308,7 +308,7 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
         //    specific addr and the same port; with two exceptions: 
         //    a. if a listening (server) TCP socket is already bound to a "ANY-ADDR" and a specific 
         //       port, no other TCP socket can be bound to the same port (with either "ANY-ADDR" or a 
-        //       specific port). This restriction does not apply to non-listening (client) TCP sockets, 
+        //       specific addr). This restriction does not apply to non-listening (client) TCP sockets, 
         //       and it is also OK to with the order exchanged: first bind a listening TCP socket to a 
         //       specific address and port, then bind another socket to "ANY-ADDR" and the same port;
         //    b. for UDP sockets it behaves exactly like SO_REUSEPORT in BSD: two UDP sockets can be 
@@ -316,7 +316,7 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
         //       they were bound.
         // 2. A socket has a send buffer, and it will go to a state called "TIME_WAIT" when it's closed
         //    with send buffer not empty. The socket is not really closed util the buffer is flushed or
-        //    a timeout called Linger Time is elpased. During this time period, you cannot bind a new 
+        //    a timeout called "Linger Time" is elpased. During this time period, you cannot bind a new 
         //    socket to the same address and port unless SO_REUSEADDR is set on the "new socket".
         //    
         //Yuanguo: important!!!!!!
@@ -367,19 +367,19 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
         //      1. client sends a SYN pack; unlike an ordinary SYN pack, it contains a "Fast Open Cookie Request"
         //      2. when received the SYN pack, the server generates a "Fast Open Cookie" by encrypting client's IPADDR, and then
         //         sends the SYN/ACK pack to the client; unlike an ordinary SYN/ACK pack, it contains the "Fast Open Cookie";
-        //      3. the client stores the "Fast Open Cookie" and sends ACK pack (and user data); The key point is the "Fast Open 
+        //      3. the client stores the "Fast Open Cookie" and sends ACK pack and payload (user data); The key point is the "Fast Open 
         //         Cookie" the client stored, it is used for subsequent connections;
         //Subsequent connections:
-        //      1. client sends SYN pack; and the SYN pack contains the "Fast Open Cookie" and user data;
+        //      1. client sends SYN pack; and the SYN pack contains the "Fast Open Cookie" and payload (user data);
         //      2. server validates the "Fast Open Cookie" 
-        //         a. if passed, server sends back SYN/ACK, the ACK is for both client's SYN pack and user data. And, the user
-        //            data is passed to application; (Note the user data is transfered in the first pack);
+        //         a. if passed, server sends back SYN/ACK, the ACK is for both client's SYN pack and payload (user data). And, the
+        //            payload is passed to application; (Note the payload is transfered in the first pack);
         //         b. if failed, server sends back SYN/ACK, the ACK is only for client's SYN pack; then an ordinary three-way-
         //            handshake happens;
-        //      3. if passed, server may send application's reply-data (note user data has been transfered to application in step 
+        //      3. if passed, server may send application's reply-data (note payload has been transfered to application in step 
         //            1, so application may give reply by now) before client sends its ACK (which is the last step of three-way-
         //            handshake)
-        //      4. if failed, client packs the user data in its ACK (which is the last step of three-way-handshake);
+        //      4. if failed, client packs the payload in its ACK (which is the last step of three-way-handshake);
         if (getsockopt(ls[i].fd, IPPROTO_TCP, TCP_FASTOPEN,
                        (void *) &ls[i].fastopen, &olen)
             == -1)
@@ -440,9 +440,9 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
         //TCP_DEFER_ACCEPT: 
         // 1. when set on server socket (lisenting socket), server will ignore client's ACK (the last step 
         //    in three-way-handshake) and will not wake up the application (which is blocking on accept()) 
-        //    until user data is arrived;
+        //    until payload (user data) is arrived;
         // 2. when set on client socket (non-listening socket), client will not send a separate ACK (the last 
-        //    step in three-way-handshake), but set the ACK flag in the first user-data pack;
+        //    step in three-way-handshake), but set the ACK flag in the first payload (user data) pack;
         if (getsockopt(ls[i].fd, IPPROTO_TCP, TCP_DEFER_ACCEPT, &timeout, &olen)
             == -1)
         {

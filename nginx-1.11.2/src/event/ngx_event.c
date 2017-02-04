@@ -937,7 +937,7 @@ ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     rv = ngx_conf_parse(cf, NULL);
     ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s finished to parse contents in events{} block", __FILE__,__LINE__,__func__);
 
-    *cf = pcf;   //Yuanguo: restore conf;
+    *cf = pcf;  //Yuanguo: restore conf;
 
     if (rv != NGX_CONF_OK) {
         return rv;

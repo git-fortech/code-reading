@@ -255,9 +255,9 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     cf->cmd_type = NGX_HTTP_MAIN_CONF;
 
 
-    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s start to parse contents in  http{} block", __FILE__,__LINE__,__func__);
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s start to parse contents in http{} block", __FILE__,__LINE__,__func__);
     rv = ngx_conf_parse(cf, NULL);
-    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s finished to parse contents in  http{} block", __FILE__,__LINE__,__func__);
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s finished to parse contents in http{} block", __FILE__,__LINE__,__func__);
 
     if (rv != NGX_CONF_OK) {
         goto failed;
@@ -311,6 +311,8 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             return NGX_CONF_ERROR;
         }
 
+        //Yuanguo: noname locations, named locations and regex locations were cut off
+        //from the queue 'clcf->locations', only "static locations" are left.
         if (ngx_http_init_static_location_trees(cf, clcf) != NGX_OK) {
             return NGX_CONF_ERROR;
         }
@@ -593,6 +595,84 @@ static char *
 ngx_http_merge_servers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf,
     ngx_http_module_t *module, ngx_uint_t ctx_index)
 {
+    //Yuanguo: 
+    //                 indexed by module.index
+    //                +------------------------+
+    //                |                        |
+    //                +------------------------+
+    //                ......                   
+    //                +------------------------+  struct ngx_http_conf_ctx_t
+    //               7| ngx_http_conf_ctx_t *  |--> +------------------+      main conf array indexed by module.ctx_index 
+    //                +------------------------+ ^  | void  **main_conf|  ---+-> +----------------+
+    //                |                        | |  | void  **srv_conf |  --+^   |                | ---->  +-------------------------+ 
+    //                +------------------------+ |  | void  **loc_conf |  -+||   +----------------+        |         struct          |
+    //                |                        | |  +------------------+   |||   |                | -+     |ngx_http_core_main_conf_t|
+    //                +------------------------+ |                         |||   +----------------+  |     +-------------------------+
+    //                ......                     |                         |||   ......              |     |  servers                |
+    //                                           |                         |||                       |     |  ......                 |
+    //                              (A) cf->ctx--+                         |||                       |     +-------------------------+
+    //                                                                     |||                       |
+    //                                                                     |||                       |
+    //                                                                     |||                       +-->  +-------------------------+
+    //                                                                     |||                             |         struct          |
+    //                                                                     |||                             | ngx_http_xx_main_conf_t |
+    //                                                                     |||                             +-------------------------+ 
+    //                                                       +-------------+++
+    //                                                       |  ^          ||
+    // for one servr{} block                                 |  |          || server conf array indexed by module.ctx_index
+    //                                                       |  |          |+->  +----------------+
+    //  (B)-> +--------------------+                         |  |          |     |                | ---->  +-------------------------+
+    //        | void  **main_conf  | ------------------------+  |          |     +----------------+        |         struct          |
+    //        | void  **srv_conf   | -----> +--------------+    |          |     |                |        |  ngx_http_xx_srv_conf_t |
+    //        | void  **loc_conf   | --+    |              |    |          |     +----------------+        +-------------------------+
+    //        +--------------------+   |    +--------------+    |          |     ......
+    //                                 |    |              |    |          |
+    //                                 |    +--------------+    |          |
+    //                                 |    ....                |          |
+    //                                 |                        |          |  location conf array indexed by module.ctx_index
+    //                                 +--> +--------------+    |          +-->  +----------------+
+    //                                      |              |    |                |                | ---->  +-------------------------+
+    //                                      +--------------+    |                +----------------+        |         struct          |
+    //                                      |              |    |                |                |        |  ngx_http_xx_loc_conf_t |
+    //                                      +--------------+    |                +----------------+        +-------------------------+
+    //                                      ......              |                ......
+    //                                                          |
+    //                                                          |
+    //                                                          |
+    //for another servr{} block                                 |
+    //                                                          |
+    //  (B)-> +--------------------+                            |
+    //        | void  **main_conf  | -------------------------> + <-----+
+    //        | void  **srv_conf   | -----> +--------------+ <------+   |
+    //        | void  **loc_conf   | --+    |              |        |   |
+    //        +--------------------+   |    +--------------+        |   |
+    //                                 |    |              |        |   |
+    //                                 |    +--------------+        |   |
+    //                                 |    ....                    |   |
+    //                                 |                            |   |
+    //                                 +--> +--------------+        |   |
+    //                                      |              |        |   |
+    //                                      +--------------+        |   |
+    //                                      |              |        |   |
+    //                                      +--------------+        |   |
+    //                                      ....                    |   |
+    //                                                              |   |
+    //                                                              |   |
+    //                                                              |   |
+    //                                                              |   |                 for a location block
+    //                                                              |   |   +--------------------+  <-(C)
+    //                                                              |   +-- | void  **main_conf  | 
+    //                                                              +------ | void  **srv_conf   |                 
+    //                                                              +------ | void  **loc_conf   |                   
+    //                                                              |       +--------------------+                       
+    //                                                              |                                                  
+    //                                      +--------------+ <------+
+    //                                      |              |
+    //                                      +--------------+
+    //                                      |              |
+    //                                      +--------------+
+    //                                      ....            
+
     char                        *rv;
     ngx_uint_t                   s;
     ngx_http_conf_ctx_t         *ctx, saved;
@@ -608,11 +688,12 @@ ngx_http_merge_servers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf,
 
         /* merge the server{}s' srv_conf's */
 
-        ctx->srv_conf = cscfp[s]->ctx->srv_conf;
+        ctx->srv_conf = cscfp[s]->ctx->srv_conf;   //Yuanguo:  B::srv_conf 
 
         if (module->merge_srv_conf) {
-            rv = module->merge_srv_conf(cf, saved.srv_conf[ctx_index],
-                                        cscfp[s]->ctx->srv_conf[ctx_index]);
+            //Yuanguo: merge A::srv_conf to B::srv_conf
+            rv = module->merge_srv_conf(cf, saved.srv_conf[ctx_index],       //Yuanguo: A::srv_conf
+                                        cscfp[s]->ctx->srv_conf[ctx_index]); //Yuanguo: B::srv_conf
             if (rv != NGX_CONF_OK) {
                 goto failed;
             }
@@ -622,8 +703,9 @@ ngx_http_merge_servers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf,
 
             /* merge the server{}'s loc_conf */
 
-            ctx->loc_conf = cscfp[s]->ctx->loc_conf;
+            ctx->loc_conf = cscfp[s]->ctx->loc_conf;   //Yuanguo: B::loc_conf
 
+            //Yuanguo: merge A::loc_conf to B::loc_conf
             rv = module->merge_loc_conf(cf, saved.loc_conf[ctx_index],
                                         cscfp[s]->ctx->loc_conf[ctx_index]);
             if (rv != NGX_CONF_OK) {
@@ -634,6 +716,7 @@ ngx_http_merge_servers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf,
 
             clcf = cscfp[s]->ctx->loc_conf[ngx_http_core_module.ctx_index];
 
+            //Yuanguo: merge B::loc_conf to C::loc_conf
             rv = ngx_http_merge_locations(cf, clcf->locations,
                                           cscfp[s]->ctx->loc_conf,
                                           module, ctx_index);
@@ -683,6 +766,7 @@ ngx_http_merge_locations(ngx_conf_t *cf, ngx_queue_t *locations,
             return rv;
         }
 
+        //Yuanguo: locations may be nested, so here is a recursion;
         rv = ngx_http_merge_locations(cf, clcf->locations, clcf->loc_conf,
                                       module, ctx_index);
         if (rv != NGX_CONF_OK) {
@@ -716,13 +800,15 @@ ngx_http_init_locations(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
         return NGX_OK;
     }
 
+    //Yuanguo: sort it like:
+    //         ....   [regex locations]  [named locations]  [noname locations]
     ngx_queue_sort(locations, ngx_http_cmp_locations);
 
     named = NULL;
     n = 0;
 #if (NGX_PCRE)
-    regex = NULL;
-    r = 0;
+    regex = NULL;  //Yuanguo: keep the 1st regex location;
+    r = 0; 
 #endif
 
     for (q = ngx_queue_head(locations);
@@ -767,6 +853,7 @@ ngx_http_init_locations(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
     }
 
     if (q != ngx_queue_sentinel(locations)) {
+        //Yuanguo: cut the noname locations off from the tail of queue 'locations'. they are discarded ????
         ngx_queue_split(locations, q, &tail);
     }
 
@@ -790,6 +877,8 @@ ngx_http_init_locations(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
 
         *clcfp = NULL;
 
+        //Yuanguo: cut the named locations off from the tail of queue 'locations'. they have been saved 
+        //in cscf->named_locations;
         ngx_queue_split(locations, named, &tail);
     }
 
@@ -816,6 +905,8 @@ ngx_http_init_locations(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
 
         *clcfp = NULL;
 
+        //Yuanguo: cut the regex locations off from the tail of queue 'locations'. they have been saved 
+        //in pclcf->regex_locations;
         ngx_queue_split(locations, regex, &tail);
     }
 
@@ -862,6 +953,7 @@ ngx_http_init_static_location_trees(ngx_conf_t *cf,
 
     ngx_http_create_locations_list(locations, ngx_queue_head(locations));
 
+    //Yuanguo: transform a sorted list into a binary-search-tree;
     pclcf->static_locations = ngx_http_create_locations_tree(cf, locations, 0);
     if (pclcf->static_locations == NULL) {
         return NGX_ERROR;
@@ -972,6 +1064,8 @@ ngx_http_cmp_locations(const ngx_queue_t *one, const ngx_queue_t *two)
         return -1;
     }
 
+    //Yuanguo: the order of regex matches should be kept! The search terminates on the 1st match!
+    //         so, do not sort them.
     if (first->regex || second->regex) {
         /* do not sort the regex matches */
         return 0;
@@ -1051,6 +1145,15 @@ ngx_http_create_locations_list(ngx_queue_t *locations, ngx_queue_t *q)
         return;
     }
 
+    //Yuanguo:
+    //  ... --> /A --> /A/B --> /A/B/C --> /P --> ...
+    //          ^                          ^
+    //          |                          |
+    //          q                          x
+    //
+    // the code below will cut sub-queue "/A/B --> /A/B/C" out (becoming ... --> /A --> /P --> ...),
+    // and connect the sub-queue to lq->list;
+
     len = lq->name->len;
     name = lq->name->data;
 
@@ -1060,6 +1163,12 @@ ngx_http_create_locations_list(ngx_queue_t *locations, ngx_queue_t *q)
     {
         lx = (ngx_http_location_queue_t *) x;
 
+        //Yuanguo: if 
+        //            len <= lx->name->len   
+        //         and
+        //            name is a prefix of lx->name
+        //         then 
+        //            continue;
         if (len > lx->name->len
             || ngx_filename_cmp(name, lx->name->data, len) != 0)
         {
@@ -1074,16 +1183,16 @@ ngx_http_create_locations_list(ngx_queue_t *locations, ngx_queue_t *q)
         return;
     }
 
-    ngx_queue_split(locations, q, &tail);
-    ngx_queue_add(&lq->list, &tail);
+    ngx_queue_split(locations, q, &tail);  //Yuanguo: cut off "/A/B --> /A/B/C --> /P --> ..." from locations;
+    ngx_queue_add(&lq->list, &tail);       //Yuanguo: append  "/A/B --> /A/B/C --> /P --> ..." to lq->list;
 
     if (x == ngx_queue_sentinel(locations)) {
         ngx_http_create_locations_list(&lq->list, ngx_queue_head(&lq->list));
         return;
     }
 
-    ngx_queue_split(&lq->list, x, &tail);
-    ngx_queue_add(locations, &tail);
+    ngx_queue_split(&lq->list, x, &tail);  //Yuanguo: cut off "/P --> ..." from lq->list;
+    ngx_queue_add(locations, &tail);       //Yuanguo: append  "/P --> ..." to locations;
 
     ngx_http_create_locations_list(&lq->list, ngx_queue_head(&lq->list));
 
@@ -1128,7 +1237,7 @@ ngx_http_create_locations_tree(ngx_conf_t *cf, ngx_queue_t *locations,
     node->len = (u_char) len;
     ngx_memcpy(node->name, &lq->name->data[prefix], len);
 
-    ngx_queue_split(locations, q, &tail);
+    ngx_queue_split(locations, q, &tail);  //Yuanguo: q is included in 'tail', needs to be removed;
 
     if (ngx_queue_empty(locations)) {
         /*
@@ -1143,7 +1252,7 @@ ngx_http_create_locations_tree(ngx_conf_t *cf, ngx_queue_t *locations,
         return NULL;
     }
 
-    ngx_queue_remove(q);
+    ngx_queue_remove(q);                   //Yuanguo: remove q from tail;
 
     if (ngx_queue_empty(&tail)) {
         goto inclusive;

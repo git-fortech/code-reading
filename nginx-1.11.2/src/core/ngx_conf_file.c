@@ -340,7 +340,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
     ngx_str_t      *name;
     ngx_command_t  *cmd;
 
-    name = cf->args->elts;  //Yuanguo: function ngx_conf_read_token() has put something into cf->args;
+    name = cf->args->elts;  //Yuanguo: function ngx_conf_read_token() has put some words into cf->args;
 
     ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s name=%s", __FILE__,__LINE__,__func__,name->data);
 
@@ -448,6 +448,19 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
                 //         points to the array of conf structs of event modules. see 
                 //         ngx_events_block(), which created the array and let cf->ctx
                 //         point to it;
+                //
+                //         when parsing contents inside events{ ... }, cf->ctx
+                //
+                //   cf->ctx ---> +-------------------+      indexed by module.ctx_index
+                //                |      pointer      |  ----->  +----------------+ 
+                //                +-------------------+         0|    void *      | ---->  +------------------+
+                //                                               +----------------+        |      struct      |
+                //                                              1|                |        | ngx_event_conf_t |
+                //                                               +----------------+        +------------------+
+                //                                              2|                |
+                //                                               +----------------+
+                //                                               ......
+ 
                 confp = *(void **) ((char *) cf->ctx + cmd->conf);
 
                 if (confp) {
@@ -504,6 +517,10 @@ invalid:
 static ngx_int_t
 ngx_conf_read_token(ngx_conf_t *cf)
 {
+    //Yuanguo: this function returns several words in cf->args array. e.g. when parsing line
+    //                worker_processes  4;
+    //         word "worker_processes" and "4" will be returned.
+
     ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Enter", __FILE__,__LINE__,__func__);
 
     u_char      *start, ch, *src, *dst;
@@ -540,7 +557,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
 
                 if (cf->args->nelts > 0 || !last_space) {
 
-                    if (cf->conf_file->file.fd == NGX_INVALID_FILE) {
+                    if (cf->conf_file->file.fd == NGX_INVALID_FILE) { //Yuanguo: we're not parsing a conf file, but the conf_param;
                         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                            "unexpected end of parameter, "
                                            "expecting \";\"");
@@ -548,7 +565,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
                         return NGX_ERROR;
                     }
 
-                    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,    //Yuanguo: we're parsing a conf file;
                                   "unexpected end of file, "
                                   "expecting \";\" or \"}\"");
                     ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s Exit", __FILE__,__LINE__,__func__);
@@ -560,8 +577,19 @@ ngx_conf_read_token(ngx_conf_t *cf)
             }
 
             //Yuanguo: buffer is empty, but we have not finished reading conf file;
+
+            //Yuanguo: left-content: bytes that has been read into buffer and parsed, but cannot be cleared out from the buffer, maybe 
+            //quote (' or ") is not closed.
+            //                            buffer space
+            //      +------------------------------------------------------------------------+
+            //      |                                  '$remote_addr - $remote_user          |
+            //      +------------------------------------------------------------------------+
+            //      ^   content parsed and cleared      ^      left-content       ^
+            //      |                                   |                         |
+            //    b->start                            start                    b->pos = b->last
             len = b->pos - start;
 
+            //Yuanguo: left-content consumes the whole buffer space (4K), something is wrong! maybe quotes are not in pairs! 
             if (len == NGX_CONF_BUFFER) {
                 cf->conf_file->line = start_line;
 
@@ -587,7 +615,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
             }
 
             if (len) {
-                ngx_memmove(b->start, start, len);
+                ngx_memmove(b->start, start, len);   //Yuanguo: move the left-content to the beginning of the buffer space;
             }
 
             size = (ssize_t) (file_size - cf->conf_file->file.offset); //Yuanguo: size of content in conf file

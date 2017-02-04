@@ -3110,6 +3110,7 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     *cf = pcf;
 
     if (rv == NGX_CONF_OK && !cscf->listen) {
+        ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s no listen command in server, add default listen", __FILE__,__LINE__,__func__);
         ngx_memzero(&lsopt, sizeof(ngx_http_listen_opt_t));
 
         sin = &lsopt.sockaddr.sockaddr_in;
@@ -3280,6 +3281,8 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
         mod = value[1].data;
         name = &value[2];
 
+        ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s location \"%s %s\" encountered", __FILE__,__LINE__,__func__, mod, name->data);
+
         if (len == 1 && mod[0] == '=') {                          //Yuanguo: location  = name { ... }   exact match
 
             clcf->name = *name;
@@ -3311,6 +3314,8 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
     } else {
 
         name = &value[1];
+
+        ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s location \"%s\" encountered", __FILE__,__LINE__,__func__, name->data);
 
         if (name->data[0] == '=') {                                 //Yuanguo: location  =name { ... }
 
@@ -3348,11 +3353,13 @@ ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
 
             clcf->name = *name;
 
-            if (name->data[0] == '@') {
+            if (name->data[0] == '@') {                             //Yuanguo: location   @name { ... }
                 clcf->named = 1;
             }
         }
     }
+
+    ngx_log_error(NGX_LOG_EMERG, cf->cycle->log, 0, "YuanguoDbg %s:%d %s, location %s: noname=%d named=%d exact_match=%d noregex=%d regex=%p", __FILE__,__LINE__,__func__, clcf->name.data, clcf->noname, clcf->named, clcf->exact_match, clcf->noregex, clcf->regex);
 
     pclcf = pctx->loc_conf[ngx_http_core_module.ctx_index];
 
@@ -3555,6 +3562,9 @@ ngx_http_core_type(ngx_conf_t *cf, ngx_command_t *dummy, void *conf)
     //                       | key_hash = xx          |
     //                       +------------------------+
     //                       ......
+    //
+    // But, this does not seem like a "hash table". Is lookup operation fast? What is the
+    // way key_hash is used?
 
     for (i = 1; i < cf->args->nelts; i++) {  //Yuanguo: subsequent columns, that are the keys;
 
@@ -4435,7 +4445,7 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
             } else {
 
-#if (NGX_HAVE_KEEPALIVE_TUNABLE)  // Yuanguo: we have this!
+#if (NGX_HAVE_KEEPALIVE_TUNABLE)  // Yuanguo: we have this!  keepidle:keepintvl:keepcnt
                 u_char     *p, *end;
                 ngx_str_t   s;
 

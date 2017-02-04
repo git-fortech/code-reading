@@ -345,15 +345,15 @@ struct ngx_http_core_loc_conf_s {
     ngx_str_t     name;          /* location name */
 
 #if (NGX_PCRE)
-    ngx_http_regex_t  *regex;
+    ngx_http_regex_t  *regex;      //Yuanguo:   location ~ name { ... }  or location ~* name { ... }
 #endif
 
     unsigned      noname:1;   /* "if () {}" block or limit_except */
     unsigned      lmt_excpt:1;
-    unsigned      named:1;
+    unsigned      named:1;         //Yuanguo:   location   @name { ... }
 
-    unsigned      exact_match:1;
-    unsigned      noregex:1;
+    unsigned      exact_match:1;   //Yuanguo:   location =  name { ... }
+    unsigned      noregex:1;       //Yuanguo:   location ^~ name { ... }
 
     unsigned      auto_redirect:1;
 #if (NGX_HTTP_GZIP)
@@ -410,6 +410,8 @@ struct ngx_http_core_loc_conf_s {
     //                       | key_hash = xx          |
     //                       +------------------------+
     //                       ......
+    // But, this does not seem like a "hash table". Is lookup operation fast? What is the
+    // way key_hash is used?
     ngx_array_t  *types;
     ngx_hash_t    types_hash;
     ngx_str_t     default_type;
